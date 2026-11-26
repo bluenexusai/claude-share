@@ -13243,7 +13243,7 @@ export const register: Register = (on, options) => {
           </Box>
         ) : null}
         {native}
-        <Box flexDirection="row" alignItems="center" gap="xs" display={shows ? 'flex' : 'none'} hover={shows ? undefined : { display: 'flex' }}>
+        <Box flexDirection="row" alignItems="center" gap="xs" display="none">
           {reacted.map(c => chip(c.r, c.who, c.mine))}
           {shows && unreacted.length ? (
             <Box flexDirection="row" gap="xs" display="none" hover={{ display: 'flex' }}>
