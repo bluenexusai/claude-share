@@ -2272,6 +2272,43 @@ async function noteMention($: $, room: ShareRoom, who: string, text: string, whe
   nudgeSidebar($)
 }
 
+// 방장 세션의 Claude 가 답에서 방 사람을 @ 로 불렀을 때(11/26).
+// 손님에게는 방 채팅 줄로 알린다. 손님 쪽 플러그인은 채팅 줄의 멘션을 원래 잡는다(고치지 않은 판도).
+// 방장 본인을 불렀으면 이 컴퓨터의 알림과 독 바운스로 알린다(자기 채팅 줄은 멘션으로 치지 않으므로).
+async function tagFromAnswer($: $, text: string) {
+  if (!text || !text.includes('@')) return
+  const room = await read($, roomA)
+  if (!room) return
+  const me = await meIn($, room)
+  const names = (await read($, peopleA)).map(p => p.name)
+  // 코드 블록과 코드 글자 안의 @ 는 멘션이 아니다.
+  const plain = text.replace(/```[\s\S]*?```/g, ' ').replace(/`[^`\n]*`/g, ' ')
+  const hit = mentionsOf(plain, names)
+  if (!hit.length) return
+  const tidy = (line: string) => line.replace(/[*#>|]+/g, ' ').replace(/\s+/g, ' ').trim()
+  const linesFor = (who: readonly string[]) =>
+    plain
+      .split('\n')
+      .filter(line => mentionsOf(line, who).length > 0)
+      .map(tidy)
+      .filter(Boolean)
+      .slice(0, 2)
+      .join(' / ')
+      .slice(0, 600)
+  const others = hit.filter(name => name !== me)
+  if (others.length) {
+    const said = linesFor(others)
+    if (said) await postChat($, `Claude: ${said}`)
+  }
+  if (hit.includes(me)) {
+    const said = linesFor([me])
+    if (said) {
+      void notifyMention($, 'Claude', said, 'prompt').catch(() => {})
+      void bounceDock($).catch(() => {})
+    }
+  }
+}
+
 // 멘션을 데스크톱 알림으로: 맥 알림 센터(osascript)나 notify-send 로 직접 띄우고, 둘 다 없을 때만 $.ui.notify 로 넘긴다.
 // $.ui.notify 를 먼저 쓰지 않는 까닭: 데스크톱 앱에선 「보냄(client)」이라 답해도 Claude 앱 알림이 꺼져 있으면 아무것도 안 뜬다.
 async function notifyMention($: $, who: string, said: string, where: 'prompt' | 'chat') {
@@ -12485,7 +12522,10 @@ export const register: Register = (on, options) => {
       }
       if (mode === 'guest') scheduleRides($)
     }
-    return next(e)
+    const done = await next(e)
+    // 방장 세션의 Claude 가 답에서 방 사람을 @ 로 부르면 그 사람에게 실제 알림이 가게 한다(11/26).
+    if (mode === 'host' && e.reason === 'answer') void tagFromAnswer($, done.text).catch(() => {})
+    return done
   })
 
   // Host: live text for guests while Claude writes.
