@@ -12155,6 +12155,34 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // 입력창에서 @ 를 치면 방에 있는 사람 이름을 추천한다(11/20).
+  // 고르면 멘션 규칙(mentionsOf)에 맞는 꼴로 써 준다: 이름 전체를 띄어쓰기 없이, 안 되면 첫 낱말.
+  on('prompt.autocomplete', { token: /^@/ }, async ($, e, next) => {
+    // 아래쪽이 답을 못 줘도(추천 없음으로 치고) 이 훅이 입력창을 망가뜨리지 않게 한다.
+    const rest = await next(e).catch(() => ({ suggestions: [] as { text: string; label?: string; description?: string }[] }))
+    try {
+      if ((await read($, modeA)) === 'idle') return rest
+      const room = await read($, roomA)
+      const typed = e.token.slice(1).toLowerCase()
+      const rows = (await read($, peopleA))
+        .filter(p => !(room && isMe(p, room.seat)))
+        .filter(p => {
+          const name = p.name.toLowerCase()
+          return !typed || name.replace(/\s+/g, '').startsWith(typed) || name.split(/\s+/).some(word => word.startsWith(typed))
+        })
+        .sort((a, b) => Number(b.online) - Number(a.online))
+        .slice(0, 8)
+        .map(p => {
+          const whole = p.name.replace(/\s+/g, '')
+          const handle = /^[\p{L}\p{N}._-]+$/u.test(whole) ? whole : (p.name.split(/\s+/)[0] ?? whole)
+          return { text: `@${handle} `, label: `@${p.name}`, description: p.role === 'host' ? '방장' : p.online ? '참여 중' : '나감' }
+        })
+      return { suggestions: [...rest.suggestions, ...rows] }
+    } catch {
+      return rest
+    }
+  })
+
   // Pasting a share link joins it; typing in a guest session talks to the
   // shared one.
   on('prompt.submit', async ($, e, next) => {
