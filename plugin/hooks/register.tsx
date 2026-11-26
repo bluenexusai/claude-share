@@ -1968,7 +1968,7 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
         if (s.live) turnBy = by
         const turn: ShareTurn = { id: String(body.turnId ?? event.seq), who: by, prompt: prompt.replace(/\s+/g, ' ').trim().slice(0, 400), at: event.ts }
         await update($, turnsA, list => (s.live ? [...list.filter(t => t.id !== turn.id), turn].slice(-200) : list))
-        if (live && !mine && prompt) await noteMention($, room, by, prompt, 'prompt')
+        if (live && prompt) await noteMention($, room, by, prompt, 'prompt') // 방장 쪽에선 turn 이 늘 mine 이라 손님 멘션이 막혀 있었다(11/20 수정). 자기 멘션은 noteMention 이 거른다.
         // A guest's own prompt starting on the host's Claude.
         if (live && mode === 'guest' && by === (await meIn($, room))) void cue($, 'turn')
       } else if (body.state === 'end') {
