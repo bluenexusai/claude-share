@@ -2265,8 +2265,34 @@ async function noteMention($: $, room: ShareRoom, who: string, text: string, whe
   const said = text.replace(/\s+/g, ' ').trim()
   $.ui.toast(`${who} mentioned you${where === 'chat' ? ' in the chat' : ''}: ${said.slice(0, 120)}${said.length > 120 ? '…' : ''}`)
   void cue($, 'mention', `${who} mentioned you`)
+  // 맥 알림 센터에도 띄운다(11/20). 초대 알림(notifyInvite)과 같은 길.
+  void notifyMention($, who, said, where).catch(() => {})
   void $.prompt.suggest({ text: `@${who} ` }).catch(() => {})
   nudgeSidebar($)
+}
+
+// 멘션을 데스크톱 알림으로: 맥 알림 센터(osascript)나 notify-send 로 직접 띄우고, 둘 다 없을 때만 $.ui.notify 로 넘긴다.
+// $.ui.notify 를 먼저 쓰지 않는 까닭: 데스크톱 앱에선 「보냄(client)」이라 답해도 Claude 앱 알림이 꺼져 있으면 아무것도 안 뜬다.
+async function notifyMention($: $, who: string, said: string, where: 'prompt' | 'chat') {
+  // 시험용 세션(SHARED_SESSION_NO_BROWSER=1)은 이 컴퓨터에 아무것도 띄우지 않는다.
+  if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
+  const title = `${who} 님이 멘션했습니다`
+  const body = `${where === 'chat' ? '(채팅) ' : ''}${said.slice(0, 160)}${said.length > 160 ? '…' : ''}`
+  const as = (text: string) => `"${text.slice(0, 200).replace(/[\\"]/g, c => `\\${c}`)}"`
+  const ran = await sh(
+    $,
+    [
+      'if command -v osascript >/dev/null 2>&1; then',
+      `  osascript -e ${sq(`display notification ${as(body)} with title ${as(title)} subtitle "Shared Sessions"`)} >/dev/null 2>&1`,
+      'elif command -v notify-send >/dev/null 2>&1; then',
+      `  notify-send ${sq(title)} ${sq(body)} >/dev/null 2>&1`,
+      'else',
+      '  exit 3',
+      'fi',
+      '',
+    ].join('\n'),
+  ).catch(() => null)
+  if (!ran || ran.code !== 0) await $.ui.notify(body, { title }).catch(() => null)
 }
 
 const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write'])
