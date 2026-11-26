@@ -1129,6 +1129,26 @@ let mainStarts = 0
 // Guest: a prompt with attachments, held until its stored message hands over
 // their bytes (a prompt's hook sees only their kinds), then sent with them.
 let heldPrompt: { text: string; pid: string; names: string[]; timer: Timer } | null = null
+
+// 방장이 답 도중에 친 말. 엔진의 대기 줄에 있는 동안 그 글을 기억해 둔다(가장 새 20개).
+// 엔진이 그 말을 도는 턴 안에 끼워 넣으면 대화에는 사용자 줄이 아니라 첨부(queued_command)로 남는다.
+// 첨부의 글은 모델에게 주는 안내문에 싸여 있어서, 기억해 둔 글로 원래 말을 찾는다.
+const queuedByHost: string[] = []
+const MID_TURN = /The user sent a new message while you were working:\n([\s\S]*?)\n\nThis is how /
+
+function midTurnWords(content: unknown): string | null {
+  const shown =
+    typeof content === 'string'
+      ? content
+      : (Array.isArray(content) ? content : []).map(b => (typeof (b as { text?: unknown })?.text === 'string' ? (b as { text: string }).text : '')).join('\n')
+  if (!shown) return null
+  const kept = queuedByHost.filter(words => shown.includes(words)).sort((a, b) => b.length - a.length)[0]
+  if (kept) {
+    queuedByHost.splice(queuedByHost.indexOf(kept), 1)
+    return kept
+  }
+  return MID_TURN.exec(shown)?.[1]?.trim() || null
+}
 // Host: every teammate's call put to the host and not answered yet, oldest
 // first. The engine checks a response's calls together (two pages fetched,
 // two subagents' commands), so several can wait at once. Each is asked in
@@ -12846,7 +12866,17 @@ export const register: Register = (on, options) => {
     }
     // A prompt typed mid-turn is raised once as it's queued (`queue`, from
     // 2.1.300; never a row of the conversation) and again when it goes in.
-    if (e.agentId !== undefined || (e.door as string) === 'queue') return stored
+    if (e.agentId !== undefined) return stored
+    if ((e.door as string) === 'queue') {
+      if ((await read($, modeA)) === 'host' && ['composer', 'sdk', 'bridge', 'unclassified'].includes(e.origin.kind)) {
+        for (const row of rowsFromMessage(stored.message ?? e.message, 'host', '')) {
+          if (row.kind !== 'user' || !row.text || queuedByHost.includes(row.text)) continue
+          queuedByHost.push(row.text)
+          if (queuedByHost.length > 20) queuedByHost.shift()
+        }
+      }
+      return stored
+    }
     const mode = await read($, modeA)
     // Who each of Claude's replies was for, by its message id: the line over
     // it in the transcript says so, for the host and in a guest's replay.
@@ -12861,6 +12891,18 @@ export const register: Register = (on, options) => {
     const fromGuest = e.origin.kind === 'plugin' && 'name' in e.origin && e.origin.name === PLUGIN
     const typed = fromGuest || ['composer', 'sdk', 'bridge', 'unclassified'].includes(e.origin.kind)
     const cwd = await $.session.cwd()
+    // 방장이 답 도중에 친 말이 도는 턴 안에 끼워 넣어졌다. 사용자 줄이 아니라서 아래 길로는 방에 가지 않았다.
+    // 방장의 말로 방에 보낸다. 손님의 말(이름: 글)이 이렇게 들어왔으면 그 사람의 말로 보낸다.
+    const kept = (stored.message ?? e.message) as { type?: string; name?: string; content: unknown }
+    if (kept.type === 'attachment' && kept.name === 'queued_command') {
+      const words = midTurnWords(kept.content)
+      if (words) {
+        const spoken = splitSpeaker(words)
+        const theirs = spoken && (await read($, peopleA)).some(p => p.role !== 'host' && p.name === spoken.who)
+        sendRow($, theirs && spoken ? { kind: 'user', who: spoken.who, text: spoken.text } : { kind: 'user', who: host, text: words })
+      }
+      return stored
+    }
     // A teammate's session's message, delivered from its mailbox: under the
     // teammate's name, as a relayed prompt is drawn; and Claude's SendMessage
     // to one names the session it stands for. Never a mailbox's path.
@@ -12870,6 +12912,8 @@ export const register: Register = (on, options) => {
       const row = hideMailboxes(found, routes)
       // A guest's prompt reached the model as "Name: text"; show it as theirs.
       const spoken = fromGuest && row.kind === 'user' ? splitSpeaker(row.text) : null
+      // 대기하던 말이 제 차례에 사용자 줄로 들어왔다. 기억해 둔 것을 지운다.
+      if (typed && row.kind === 'user' && queuedByHost.includes(row.text)) queuedByHost.splice(queuedByHost.indexOf(row.text), 1)
       // An edit's result carries its hunks as the tool reported them.
       const patch = row.kind === 'result' && row.id ? patches.get(row.id) : undefined
       if (patch && row.id) patches.delete(row.id)
