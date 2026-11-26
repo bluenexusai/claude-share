@@ -1968,7 +1968,7 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
         if (s.live) turnBy = by
         const turn: ShareTurn = { id: String(body.turnId ?? event.seq), who: by, prompt: prompt.replace(/\s+/g, ' ').trim().slice(0, 400), at: event.ts }
         await update($, turnsA, list => (s.live ? [...list.filter(t => t.id !== turn.id), turn].slice(-200) : list))
-        if (live && !mine && prompt) await noteMention($, room, by, prompt, 'prompt')
+        if (live && prompt) await noteMention($, room, by, prompt, 'prompt') // 방장 쪽에선 turn 이 늘 mine 이라 손님 멘션이 막혀 있었다(11/20 수정). 자기 멘션은 noteMention 이 거른다.
         // A guest's own prompt starting on the host's Claude.
         if (live && mode === 'guest' && by === (await meIn($, room))) void cue($, 'turn')
       } else if (body.state === 'end') {
@@ -2265,8 +2265,51 @@ async function noteMention($: $, room: ShareRoom, who: string, text: string, whe
   const said = text.replace(/\s+/g, ' ').trim()
   $.ui.toast(`${who} mentioned you${where === 'chat' ? ' in the chat' : ''}: ${said.slice(0, 120)}${said.length > 120 ? '…' : ''}`)
   void cue($, 'mention', `${who} mentioned you`)
+  // 맥 알림 센터에도 띄운다(11/20). 초대 알림(notifyInvite)과 같은 길.
+  void notifyMention($, who, said, where).catch(() => {})
+  void bounceDock($).catch(() => {})
   void $.prompt.suggest({ text: `@${who} ` }).catch(() => {})
   nudgeSidebar($)
+}
+
+// 멘션을 데스크톱 알림으로: 맥 알림 센터(osascript)나 notify-send 로 직접 띄우고, 둘 다 없을 때만 $.ui.notify 로 넘긴다.
+// $.ui.notify 를 먼저 쓰지 않는 까닭: 데스크톱 앱에선 「보냄(client)」이라 답해도 Claude 앱 알림이 꺼져 있으면 아무것도 안 뜬다.
+async function notifyMention($: $, who: string, said: string, where: 'prompt' | 'chat') {
+  // 시험용 세션(SHARED_SESSION_NO_BROWSER=1)은 이 컴퓨터에 아무것도 띄우지 않는다.
+  if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
+  const title = `${who} 님이 멘션했습니다`
+  const body = `${where === 'chat' ? '(채팅) ' : ''}${said.slice(0, 160)}${said.length > 160 ? '…' : ''}`
+  const as = (text: string) => `"${text.slice(0, 200).replace(/[\\"]/g, c => `\\${c}`)}"`
+  const ran = await sh(
+    $,
+    [
+      'if command -v osascript >/dev/null 2>&1; then',
+      `  osascript -e ${sq(`display notification ${as(body)} with title ${as(title)} subtitle "Shared Sessions"`)} >/dev/null 2>&1`,
+      'elif command -v notify-send >/dev/null 2>&1; then',
+      `  notify-send ${sq(title)} ${sq(body)} >/dev/null 2>&1`,
+      'else',
+      '  exit 3',
+      'fi',
+      '',
+    ].join('\n'),
+  ).catch(() => null)
+  if (!ran || ran.code !== 0) await $.ui.notify(body, { title }).catch(() => null)
+}
+
+// 멘션이 오면 독에서 Claude 아이콘이 튄다(11/20). 다른 앱의 독 아이콘은 밖에서 튀게 할 수 없어
+// ~/.claude/dock-bounce.jxa.js(Claude 아이콘을 쓴 도우미)를 띄운다. 그 파일이 없거나 이미 튀는 중이면 아무것도 안 한다.
+async function bounceDock($: $) {
+  if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
+  await sh(
+    $,
+    [
+      'f="$HOME/.claude/dock-bounce.jxa.js"',
+      '[ -f "$f" ] && command -v osascript >/dev/null 2>&1 || exit 0',
+      'pgrep -f dock-bounce.jxa.js >/dev/null 2>&1 && exit 0',
+      'nohup osascript -l JavaScript "$f" >/dev/null 2>&1 &',
+      '',
+    ].join('\n'),
+  ).catch(() => null)
 }
 
 const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write'])
