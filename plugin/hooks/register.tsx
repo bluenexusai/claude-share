@@ -2267,6 +2267,7 @@ async function noteMention($: $, room: ShareRoom, who: string, text: string, whe
   void cue($, 'mention', `${who} mentioned you`)
   // 맥 알림 센터에도 띄운다(11/20). 초대 알림(notifyInvite)과 같은 길.
   void notifyMention($, who, said, where).catch(() => {})
+  void bounceDock($).catch(() => {})
   void $.prompt.suggest({ text: `@${who} ` }).catch(() => {})
   nudgeSidebar($)
 }
@@ -2293,6 +2294,22 @@ async function notifyMention($: $, who: string, said: string, where: 'prompt' | 
     ].join('\n'),
   ).catch(() => null)
   if (!ran || ran.code !== 0) await $.ui.notify(body, { title }).catch(() => null)
+}
+
+// 멘션이 오면 독에서 Claude 아이콘이 튄다(11/20). 다른 앱의 독 아이콘은 밖에서 튀게 할 수 없어
+// ~/.claude/dock-bounce.jxa.js(Claude 아이콘을 쓴 도우미)를 띄운다. 그 파일이 없거나 이미 튀는 중이면 아무것도 안 한다.
+async function bounceDock($: $) {
+  if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
+  await sh(
+    $,
+    [
+      'f="$HOME/.claude/dock-bounce.jxa.js"',
+      '[ -f "$f" ] && command -v osascript >/dev/null 2>&1 || exit 0',
+      'pgrep -f dock-bounce.jxa.js >/dev/null 2>&1 && exit 0',
+      'nohup osascript -l JavaScript "$f" >/dev/null 2>&1 &',
+      '',
+    ].join('\n'),
+  ).catch(() => null)
 }
 
 const FILE_TOOLS = new Set(['Edit', 'MultiEdit', 'Write'])
