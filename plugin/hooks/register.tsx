@@ -4279,6 +4279,12 @@ async function acceptPrompt($: $, who: string, seat: string, text: string, pid: 
   const words = neutralize(text)
   const framed = `${who}: ${words}${marks ? `${words ? '\n\n' : ''}${marks}` : ''}`
   await update($, guestPromptsA, list => [...list, { who, seat, framed, text: framed.slice(who.length + 2), pid }])
+  // 지금 턴이 돌고 있으면 이 말은 그 턴이 끝날 때까지 기다린다. 그동안 방장 화면에는 아무것도 안 보였다.
+  // 왔다는 것과 언제 전달되는지를 방장에게 알린다.
+  if ((await read($, turnA)) || (await read($, workingA))) {
+    const said = words.replace(/\s+/g, ' ').trim()
+    $.ui.toast(`${who}: ${said.slice(0, 120)}${said.length > 120 ? '…' : ''} (지금 답이 끝나면 Claude 에게 전달됩니다)`)
+  }
   // Runs once the session is idle, after any turn already running.
   nextGuestPromptSoon($)
 }
