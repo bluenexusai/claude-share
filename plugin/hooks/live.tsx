@@ -44,7 +44,7 @@ const Live: ClientModule<Props, State> = (props, surface) => {
   const steady = props.modern ? { tabular: true } : {}
   const name = props.mine ? (
     <Text color={props.who.color} {...strong}>
-      you
+      나
     </Text>
   ) : (
     <Text color={props.who.color} {...strong}>
@@ -56,7 +56,7 @@ const Live: ClientModule<Props, State> = (props, surface) => {
     return (
       <Text wrap="truncate-end">
         <Text color={props.claude}>{spin} </Text>
-        <Text dimColor>Claude for </Text>
+        <Text dimColor>Claude 작업 중 · </Text>
         {name}
         <Text dimColor {...steady}>
           {` ${elapsed}`}
@@ -71,7 +71,7 @@ const Live: ClientModule<Props, State> = (props, surface) => {
         <Text wrap="truncate-end">
           <Text color={props.claude}>{spin} </Text>
           <Text {...strong}>Claude</Text>
-          <Text dimColor> is working for </Text>
+          <Text dimColor> 작업 중 · </Text>
           {name}
         </Text>
         <Text {...steady} {...(props.modern ? { weight: 'medium' as const } : {})}>

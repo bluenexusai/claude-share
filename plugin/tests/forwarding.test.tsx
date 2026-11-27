@@ -16,7 +16,6 @@ import {
   windowWorld,
   roomPane,
   DISCOVERED,
-  hostAsked,
   NEEDS,
   needLine,
   HOST_ONLY,
@@ -33,6 +32,10 @@ import {
   within,
 } from './support/world'
 
+// The question in the row now: its words, as drawn (support/world's hostAsked, in the row's Korean words).
+const hostAsked = async (ui: { find: (q: { type: string; text: RegExp }) => Promise<{ text?: string } | undefined> }) =>
+  (await ui.find({ type: 'Text', text: /^localhost:.*도 공유할까요\? |^손님이 localhost:.* 주소를 그대로 열 수 있게 할까요\?|^방에 .* 공유할까요\?/ }))?.text
+
 test('a replayed forwarded preview points at Open preview and the address it opens at', async ($, on) => {
   const asked = windowWorld(on)
   on('tool.list', () => ({ value: [] }) as never)
@@ -43,14 +46,14 @@ test('a replayed forwarded preview points at Open preview and the address it ope
   await $.turn.start({ turnId: 'join-preview', text: LINK })
   await $.turn.complete({ turnId: 'join-preview', isAborted: false, durationMs: 0, reason: 'answer' } as never)
   await asked.clock.advance(10)
-  await $.turn.start({ turnId: 'show-forwarded', text: 'Sam shared Sign in (preview)' })
+  await $.turn.start({ turnId: 'show-forwarded', text: 'Sam님이 공유했습니다: Sign in (미리보기)' })
   const chunks = []
   for await (const chunk of $.turn.step({ ...STEP, turnId: 'show-forwarded' } as never)) chunks.push(chunk)
   const text = chunks
     .filter(c => c.kind === 'text')
     .map(c => c.text)
     .join('')
-  expect(text).toContain(`press **Open preview** above the prompt (or **Open** in the Room) to open it at ${WINDOW_URL}`)
+  expect(text).toContain(`입력창 위 **미리보기 열기**(또는 방의 **열기**)를 누르면 ${WINDOW_URL}에서 열립니다`)
   expect(asked.launches).toHaveLength(0)
   expect(asked.localHelpers).toHaveLength(0)
   await $.turn.complete({ turnId: 'show-forwarded', isAborted: false, durationMs: 0, reason: 'answer' } as never)
@@ -99,8 +102,8 @@ test('/share-preview finds what the page uses beside it; Share too forwards it a
     tcp: true,
     host: '127.0.0.1',
   })
-  expect(await ui.find({ type: 'Text', text: 'Share localhost:3610 too? convex-local-backend, beside localhost:3340' })).toBeDefined()
-  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('Share too')
+  expect(await ui.find({ type: 'Text', text: 'localhost:3610도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340' })).toBeDefined()
+  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('함께 공유')
   await ui.press({ key: 'host-ask-yes' })
   await eventually(asked.clock, () => asked.posted.some(e => e.type === 'artifact' && e.body.port === 3610))
   await asked.clock.advance(10)
@@ -117,7 +120,7 @@ test('/share-preview finds what the page uses beside it; Share too forwards it a
   })
   // The page itself is no dependency.
   expect(asked.posted.find(e => e.type === 'artifact' && e.body.port === 3340)?.body.dependency).toBeUndefined()
-  expect(asked.toasted).toContain('Teammates can reach localhost:3610 now. Stop it in Room → Shown.')
+  expect(asked.toasted).toContain('이제 손님이 localhost:3610 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.')
   expect(await ui.find({ key: 'host-ask-yes' })).toBeUndefined()
   expect(
     Object.entries(asked.state.shares ?? {})
@@ -186,8 +189,8 @@ test('Allow forwarding finds what the page uses too; Not now is remembered for t
   await eventually(asked.clock, () => asked.posted.some(e => e.type === 'artifact' && e.body.tcp === true))
   await asked.clock.advance(20)
   expect(asked.posted.find(e => e.type === 'artifact' && e.body.tcp === true)?.body).toMatchObject({ pid: 'pv1', port: 3340, host: '127.0.0.1' })
-  expect(asked.toasted).toContain('Teammates can reach localhost:3340 now. Stop it in Room → Shown.')
-  expect(await ui.find({ type: 'Text', text: 'Share localhost:3610 too? convex-local-backend, beside localhost:3340' })).toBeDefined()
+  expect(asked.toasted).toContain('이제 손님이 localhost:3340 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.')
+  expect(await ui.find({ type: 'Text', text: 'localhost:3610도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340' })).toBeDefined()
   await ui.press({ key: 'host-ask-no' })
   await asked.clock.advance(20)
   expect(await ui.find({ key: 'host-ask-no' })).toBeUndefined()
@@ -226,8 +229,8 @@ test("/share-preview with the row full (three questions waiting) says how to sha
   await asked.clock.advance(50)
   expect(asked.state.hostAsk?.port).toBe(4001)
   const reply = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
-  expect(reply).not.toContain('from the row above the prompt')
-  expect(reply).toContain('It looks like it also uses localhost:3610 · convex-local-backend. To share localhost:3610 too, use /share-preview 3610.')
+  expect(reply).not.toContain('입력창 위 줄에서')
+  expect(reply).toContain('이 페이지는 localhost:3610 · convex-local-backend도 쓰는 것 같습니다. localhost:3610도 공유하려면 /share-preview 3610 명령을 입력하세요.')
   expect(asked.state.hostMemory?.askedAt['3610']).toBeUndefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -246,8 +249,8 @@ test('a port Claude mentions, with a guest here, asks once to open it at the sam
   await $.session.append({ message: reply, door: 'response', origin: { kind: 'composer' }, uuid: 'a1' } as never)
   // Shared through its link only once the host says so; then the same address is asked about.
   expect(await eventually(asked.clock, () => asked.state.hostAsk?.kind === 'show')).toBe(true)
-  expect(await hostAsked(ui)).toBe('Share localhost:3340 with the room?')
-  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('Share')
+  expect(await hostAsked(ui)).toBe('방에 localhost:3340 공유할까요?')
+  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('공유하기')
   expect(asked.posted.filter(e => e.type === 'artifact')).toEqual([])
   await allowShow(asked, ui)
   await eventually(asked.clock, () => asked.discovered.length)
@@ -257,10 +260,10 @@ test('a port Claude mentions, with a guest here, asks once to open it at the sam
   expect(shared).toMatchObject({ kind: 'preview', port: 3340, path: '/dash', host: '127.0.0.1' })
   expect(shared?.tcp).toBeUndefined()
   // One port a question: what it uses beside it isn't in this one's yes.
-  expect(await hostAsked(ui)).toBe('Let guests open localhost:3340 at the same address?')
-  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('Allow')
+  expect(await hostAsked(ui)).toBe('손님이 localhost:3340 주소를 그대로 열 수 있게 할까요?')
+  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('허용')
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:3340 now. Stop it in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:3340 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   await asked.clock.advance(10)
   expect(asked.sent.filter(x => x.path.endsWith('/previews')).map(x => x.body)).toEqual([
     { port: 3340, title: 'localhost:3340' },
@@ -268,8 +271,8 @@ test('a port Claude mentions, with a guest here, asks once to open it at the sam
   ])
   // Then the server it uses, in a question of its own.
   await eventually(asked.clock, () => asked.state.hostAsk?.related[0]?.port === 3610)
-  expect(await hostAsked(ui)).toBe('Share localhost:3610 too? convex-local-backend, beside localhost:3340')
-  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('Share too')
+  expect(await hostAsked(ui)).toBe('localhost:3610도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340')
+  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('함께 공유')
   await ui.press({ key: 'host-ask-yes' })
   await eventually(asked.clock, () => asked.posted.filter(e => e.type === 'artifact' && e.body.tcp === true).length === 2)
   await asked.clock.advance(10)
@@ -282,7 +285,7 @@ test('a port Claude mentions, with a guest here, asks once to open it at the sam
     [3340, '127.0.0.1', '/dash', undefined],
     [3610, 'localhost', '/', 3340],
   ])
-  expect(asked.toasted).toContain('Teammates can reach localhost:3610 now. Stop it in Room → Shown.')
+  expect(asked.toasted).toContain('이제 손님이 localhost:3610 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.')
   // Mentioned again: asked once a port.
   await $.session.append({ message: reply, door: 'response', origin: { kind: 'composer' }, uuid: 'a2' } as never)
   await asked.clock.advance(50)
@@ -311,7 +314,7 @@ test(
       } as never)
     await mention('a1')
     expect(await eventually(asked.clock, () => asked.state.hostAsk?.kind === 'show')).toBe(true)
-    expect(await hostAsked(ui)).toBe('Share localhost:3340 with the room?')
+    expect(await hostAsked(ui)).toBe('방에 localhost:3340 공유할까요?')
     await asked.clock.advance(1_000)
     expect(asked.sent.filter(x => x.path.endsWith('/previews'))).toEqual([])
     expect(asked.posted.filter(e => e.type === 'artifact')).toEqual([])
@@ -366,7 +369,7 @@ test("an Allow that couldn't forward is asked about again ten minutes on: not at
   await allowShow(asked, ui)
   await eventually(asked.clock, () => asked.state.hostAsk?.kind === 'mention')
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes("Couldn't allow forwarding localhost:3340"))
+  await eventually(asked.clock, () => asked.toasted.includes('localhost:3340 포트 전달을 허용하지 못했어요'))
   refused.now = false
   await opened()
   expect(asked.discovered).toHaveLength(1)
@@ -376,7 +379,7 @@ test("an Allow that couldn't forward is asked about again ten minutes on: not at
   await eventually(asked.clock, () => asked.state.hostAsk)
   expect(asked.discovered).toHaveLength(2)
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:3340 now. Stop it in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:3340 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   expect(asked.state.shares?.['3340']).toMatchObject({ pid: 'pv1', tcp: true })
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -399,8 +402,8 @@ test("a guest's window asking for a web server the host didn't share asks the ho
   stream.length = 0
   await asked.clock.advance(20)
   expect((await ui.find({ type: 'Text', text: /^Alex$/ }))?.props.bold).toBe(true)
-  expect(await ui.find({ type: 'Text', text: "'s preview needs localhost:3610 · convex-local-backend" })).toBeDefined()
-  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('Share')
+  expect(await ui.find({ type: 'Text', text: '님의 미리보기에 필요한 것: localhost:3610 · convex-local-backend' })).toBeDefined()
+  expect((await ui.find({ key: 'host-ask-yes' }))?.props.label).toBe('공유하기')
   await ui.press({ key: 'host-ask-yes' })
   await eventually(asked.clock, () => asked.posted.some(e => e.type === 'artifact' && e.body.port === 3610))
   expect(asked.sent.filter(x => x.path.endsWith('/previews')).map(x => x.body)).toEqual([
@@ -408,7 +411,7 @@ test("a guest's window asking for a web server the host didn't share asks the ho
   ])
   // For a page of the guest's window, which the need doesn't name.
   expect(asked.posted.find(e => e.type === 'artifact' && e.body.port === 3610)?.body.dependency).toBe(true)
-  expect(asked.toasted).toContain('Teammates can reach localhost:3610 now. Stop it in Room → Shown.')
+  expect(asked.toasted).toContain('이제 손님이 localhost:3610 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.')
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -464,17 +467,17 @@ test(
     // 3610's question shows; 3611's waits behind it.
     await deliver(asked, stream, [needLine(3610), needLine(3611)], () => looked(3611))
     await asked.clock.advance(20)
-    expect(await ui.find({ type: 'Text', text: "'s preview needs localhost:3610 · convex-local-backend" })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '님의 미리보기에 필요한 것: localhost:3610 · convex-local-backend' })).toBeDefined()
     // 3610's goes unanswered; 3611's shows, ten minutes after it was first asked.
     await asked.clock.advance(10 * 60_000 + 1_000)
-    expect(await ui.find({ type: 'Text', text: "'s preview needs localhost:3611 · api" })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '님의 미리보기에 필요한 것: localhost:3611 · api' })).toBeDefined()
     // Both asked for again: 3610 is asked about again, 3611 still is.
     await deliver(asked, stream, [needLine(3610), needLine(3611)], () => looked(3610) === 2)
     await asked.clock.advance(20)
     expect(looked(3611)).toBe(1)
     await ui.press({ key: 'host-ask-no' })
     await asked.clock.advance(20)
-    expect(await ui.find({ type: 'Text', text: "'s preview needs localhost:3610 · convex-local-backend" })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '님의 미리보기에 필요한 것: localhost:3610 · convex-local-backend' })).toBeDefined()
     await ui.press({ key: 'host-ask-no' })
     await asked.clock.advance(20)
     expect(await ui.find({ key: 'host-ask-no' })).toBeUndefined()
@@ -513,31 +516,31 @@ test('with three servers beside a page, the row asks about one port a question: 
   await ui.press({ key: 'share-prompt' })
   const reply = await $.command.run({ command: 'share-preview', args: '3340 App' } as never)
   expect(JSON.stringify(reply)).toContain(
-    'It looks like it also uses localhost:3610 · convex-local-backend, localhost:3611 · api and localhost:27017 · mongod: share them too from the row above the prompt, one at a time.',
+    '이 페이지는 localhost:3610 · convex-local-backend, localhost:3611 · api, localhost:27017 · mongod도 쓰는 것 같습니다. 입력창 위 줄에서 하나씩 함께 공유할 수 있습니다.',
   )
   const forwarded = () => asked.sent.filter(x => x.path.endsWith('/previews')).map(x => [x.body.port, x.body.tcp])
   await eventually(asked.clock, () => asked.state.hostAsk)
   // A row cut short can't hide a port a yes forwards: it names one.
-  expect(await hostAsked(ui)).toBe('Share localhost:3610 too? convex-local-backend, beside localhost:3340')
+  expect(await hostAsked(ui)).toBe('localhost:3610도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340')
   expect(asked.state.hostAsk?.related).toEqual([{ port: 3610, label: 'convex-local-backend' }])
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:3610 now. Stop it in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:3610 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   expect(forwarded()).toEqual([
     [3340, true],
     [3610, true],
   ])
   await eventually(asked.clock, () => asked.state.hostAsk?.related[0]?.port === 3611)
-  expect(await hostAsked(ui)).toBe('Share localhost:3611 too? api, beside localhost:3340')
+  expect(await hostAsked(ui)).toBe('localhost:3611도 공유할까요? api, 사용하는 페이지 localhost:3340')
   await ui.press({ key: 'host-ask-no' })
   await eventually(asked.clock, () => asked.state.hostAsk?.related[0]?.port === 27017)
-  expect(await hostAsked(ui)).toBe('Share localhost:27017 too? mongod, beside localhost:3340')
+  expect(await hostAsked(ui)).toBe('localhost:27017도 공유할까요? mongod, 사용하는 페이지 localhost:3340')
   expect(asked.state.hostMemory?.declined).toEqual([3611])
   expect(forwarded()).toEqual([
     [3340, true],
     [3610, true],
   ])
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:27017 now. Stop it in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:27017 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   await asked.clock.advance(50)
   expect(forwarded()).toEqual([
     [3340, true],
@@ -569,8 +572,8 @@ test('Allow forwarding with three servers beside the page: its toast names the p
   await pane.press({ key: 'tab-shown' })
   await pane.press({ key: 'forward-preview:pv1' })
   await eventually(asked.clock, () => asked.state.hostAsk)
-  expect(asked.toasted).toContain('Teammates can reach localhost:3340 now. Stop it in Room → Shown.')
-  expect(await hostAsked(ui)).toBe('Share localhost:3610 too? convex-local-backend, beside localhost:3340')
+  expect(asked.toasted).toContain('이제 손님이 localhost:3340 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.')
+  expect(await hostAsked(ui)).toBe('localhost:3610도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340')
   await ui.press({ key: 'host-ask-yes' })
   await eventually(asked.clock, () => asked.state.hostAsk?.related[0]?.port === 3611)
   await asked.clock.advance(20)
@@ -613,10 +616,10 @@ test("a port the host said Not now to while a mention's question waited is never
   await allowShow(asked, ui)
   await eventually(asked.clock, () => asked.state.hostAsk?.kind === 'mention')
   expect(asked.state.hostAsk).toMatchObject({ kind: 'mention', port: 3340, related: [] })
-  expect(await hostAsked(ui)).toBe('Let guests open localhost:3340 at the same address?')
+  expect(await hostAsked(ui)).toBe('손님이 localhost:3340 주소를 그대로 열 수 있게 할까요?')
   expect(asked.state.hostMemory?.declined).toEqual([3610])
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:3340 now. Stop it in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:3340 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   await asked.clock.advance(200)
   expect(asked.sent.filter(x => x.path.endsWith('/previews')).map(x => [x.body.port, x.body.tcp ?? false])).toEqual([
     [3000, true],
@@ -634,15 +637,15 @@ test("/share-preview after Not now says how to share what the row won't ask abou
   await ui.press({ key: 'share' })
   await ui.press({ key: 'share-prompt' })
   const first = await $.command.run({ command: 'share-preview', args: '3340 App' } as never)
-  expect(JSON.stringify(first)).toContain('It looks like it also uses localhost:3610 · convex-local-backend: share it too from the row above the prompt.')
+  expect(JSON.stringify(first)).toContain('이 페이지는 localhost:3610 · convex-local-backend도 쓰는 것 같습니다. 입력창 위 줄에서 함께 공유할 수 있습니다.')
   await eventually(asked.clock, () => asked.state.hostAsk)
   await ui.press({ key: 'host-ask-no' })
   await asked.clock.advance(20)
   const again = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
   await asked.clock.advance(50)
-  expect(again).not.toContain('from the row above the prompt')
+  expect(again).not.toContain('입력창 위 줄에서')
   expect(again).toContain(
-    'It looks like it also uses localhost:3610 · convex-local-backend. You said Not now to localhost:3610 in this room; to share it, use /share-preview 3610.',
+    '이 페이지는 localhost:3610 · convex-local-backend도 쓰는 것 같습니다. 이 방에서 localhost:3610 포트에 「나중에」라고 답했습니다. 공유하려면 /share-preview 3610 명령을 입력하세요.',
   )
   expect(await ui.find({ key: 'host-ask-yes' })).toBeUndefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -660,8 +663,8 @@ for (const why of ['no row here to ask in', 'its question asked already'] as con
     }
     const reply = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
     await asked.clock.advance(50)
-    expect(reply).not.toContain('from the row above the prompt')
-    expect(reply).toContain('It looks like it also uses localhost:3610 · convex-local-backend. To share localhost:3610 too, use /share-preview 3610.')
+    expect(reply).not.toContain('입력창 위 줄에서')
+    expect(reply).toContain('이 페이지는 localhost:3610 · convex-local-backend도 쓰는 것 같습니다. localhost:3610도 공유하려면 /share-preview 3610 명령을 입력하세요.')
     // The one question there is (if any), not a second.
     expect(asked.discovered).toHaveLength(why === 'no row here to ask in' ? 1 : 2)
     expect(Boolean(asked.state.hostAsk)).toBe(why !== 'no row here to ask in')
@@ -691,18 +694,18 @@ test('a backend on two ports beside a page is one question, every port before it
   await ui.press({ key: 'share' })
   await ui.press({ key: 'share-prompt' })
   const reply = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
-  expect(reply).toContain('It looks like it also uses localhost:3510 and 3511 · convex-local-backend: share it too from the row above the prompt.')
+  expect(reply).toContain('이 페이지는 localhost:3510, 3511 · convex-local-backend도 쓰는 것 같습니다. 입력창 위 줄에서 함께 공유할 수 있습니다.')
   await eventually(asked.clock, () => asked.state.hostAsk)
   // Every port before the label: a row too narrow cuts the label, never a port the yes forwards.
   const words = await hostAsked(ui)
-  expect(words).toBe('Share localhost:3510 and 3511 too? convex-local-backend, beside localhost:3340')
+  expect(words).toBe('localhost:3510, 3511도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340')
   expect(words!.indexOf('3511')).toBeLessThan(words!.indexOf('convex-local-backend'))
   expect(asked.state.hostAsk?.related).toEqual([
     { port: 3510, label: 'convex-local-backend' },
     { port: 3511, label: 'convex-local-backend' },
   ])
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:3510 and localhost:3511 now. Stop them in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:3510, localhost:3511 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   await asked.clock.advance(50)
   expect(previewPosts(asked)).toEqual([
     [3340, true],
@@ -722,18 +725,18 @@ for (const by of ['what runs there', 'their process'] as const) {
       by === 'what runs there' ? [...CONVEX, svc(3611, 'api')] : [svc(3510, 'server.js', 101), svc(3511, 'server.js', 102), svc(3512, 'server.js', 101)]
     const [first, second] =
       by === 'what runs there'
-        ? ['localhost:3510 and 3511 · convex-local-backend', 'localhost:3611 · api']
-        : ['localhost:3510 and 3512 · server.js', 'localhost:3511 · server.js']
+        ? ['localhost:3510, 3511 · convex-local-backend', 'localhost:3611 · api']
+        : ['localhost:3510, 3512 · server.js', 'localhost:3511 · server.js']
     const [asksFirst, asksSecond] =
       by === 'what runs there'
-        ? ['Share localhost:3510 and 3511 too? convex-local-backend, beside localhost:3340', 'Share localhost:3611 too? api, beside localhost:3340']
-        : ['Share localhost:3510 and 3512 too? server.js, beside localhost:3340', 'Share localhost:3511 too? server.js, beside localhost:3340']
+        ? ['localhost:3510, 3511도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340', 'localhost:3611도 공유할까요? api, 사용하는 페이지 localhost:3340']
+        : ['localhost:3510, 3512도 공유할까요? server.js, 사용하는 페이지 localhost:3340', 'localhost:3511도 공유할까요? server.js, 사용하는 페이지 localhost:3340']
     const asked = world(on, { surfaces: ['terminal'], discover: { 3340: beside(related) } })
     const ui = await $.ui.mount(band('terminal'))
     await ui.press({ key: 'share' })
     await ui.press({ key: 'share-prompt' })
     const reply = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
-    expect(reply).toContain(`It looks like it also uses ${first}, and ${second}: share them too from the row above the prompt, one at a time.`)
+    expect(reply).toContain(`이 페이지는 ${first}, ${second}도 쓰는 것 같습니다. 입력창 위 줄에서 하나씩 함께 공유할 수 있습니다.`)
     await eventually(asked.clock, () => asked.state.hostAsk)
     expect(await hostAsked(ui)).toBe(asksFirst)
     await ui.press({ key: 'host-ask-yes' })
@@ -763,9 +766,9 @@ test('Not now to a backend on two ports declines both: neither is asked about ag
   expect(previewPosts(asked)).toEqual([[3340, true]])
   const again = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
   await asked.clock.advance(50)
-  expect(again).not.toContain('from the row above the prompt')
+  expect(again).not.toContain('입력창 위 줄에서')
   expect(again).toContain(
-    'It looks like it also uses localhost:3510 and 3511 · convex-local-backend. You said Not now to localhost:3510 and localhost:3511 in this room; to share them, use /share-preview 3510 and /share-preview 3511.',
+    '이 페이지는 localhost:3510, 3511 · convex-local-backend도 쓰는 것 같습니다. 이 방에서 localhost:3510, localhost:3511 포트에 「나중에」라고 답했습니다. 공유하려면 /share-preview 3510, /share-preview 3511 명령을 입력하세요.',
   )
   expect(await ui.find({ key: 'host-ask-yes' })).toBeUndefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -786,12 +789,12 @@ test("a port of a backend declined earlier in the room is left out of its questi
   discover[3340] = beside([...CONVEX, svc(3512, 'convex-local-backend')])
   const reply = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
   expect(reply).toContain(
-    'It looks like it also uses localhost:3510, 3511 and 3512 · convex-local-backend. Share localhost:3511 and 3512 too from the row above the prompt. You said Not now to localhost:3510 in this room; to share it, use /share-preview 3510.',
+    '이 페이지는 localhost:3510, 3511, 3512 · convex-local-backend도 쓰는 것 같습니다. 입력창 위 줄에서 localhost:3511, 3512도 공유할 수 있습니다. 이 방에서 localhost:3510 포트에 「나중에」라고 답했습니다. 공유하려면 /share-preview 3510 명령을 입력하세요.',
   )
   await eventually(asked.clock, () => asked.state.hostAsk)
-  expect(await hostAsked(ui)).toBe('Share localhost:3511 and 3512 too? convex-local-backend, beside localhost:3340')
+  expect(await hostAsked(ui)).toBe('localhost:3511, 3512도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340')
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:3511 and localhost:3512 now. Stop them in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:3511, localhost:3512 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   await asked.clock.advance(50)
   expect(previewPosts(asked).filter(([port]) => port !== 3340)).toEqual([
     [3511, true],
@@ -819,7 +822,7 @@ test("a backend's question waiting its turn is looked at again as it's asked: a 
   await asked.clock.advance(20)
   await $.command.run({ command: 'share-preview', args: '3340 App' } as never)
   await eventually(asked.clock, () => asked.state.hostAsk)
-  expect(await hostAsked(ui)).toBe('Share localhost:3500 too? api, beside localhost:3340')
+  expect(await hostAsked(ui)).toBe('localhost:3500도 공유할까요? api, 사용하는 페이지 localhost:3340')
   // While api's question shows, the host shares 3510 and 3511 itself, then stops 3511.
   await $.command.run({ command: 'share-preview', args: '3510' } as never)
   await $.command.run({ command: 'share-preview', args: '3511' } as never)
@@ -848,10 +851,10 @@ test("a backend's question waiting its turn is looked at again as it's asked: a 
   await ui.press({ key: 'host-ask-no' })
   // The backend's turn: 3510 forwarded, 3511 stopped, 3512 alone left to ask about.
   await eventually(asked.clock, () => asked.state.hostAsk?.related[0]?.port === 3512)
-  expect(await hostAsked(ui)).toBe('Share localhost:3512 too? convex-local-backend, beside localhost:3340')
+  expect(await hostAsked(ui)).toBe('localhost:3512도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340')
   expect(asked.state.hostAsk?.related).toEqual([{ port: 3512, label: 'convex-local-backend' }])
   await ui.press({ key: 'host-ask-yes' })
-  await eventually(asked.clock, () => asked.toasted.includes('Teammates can reach localhost:3512 now. Stop it in Room → Shown.'))
+  await eventually(asked.clock, () => asked.toasted.includes('이제 손님이 localhost:3512 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.'))
   await asked.clock.advance(50)
   expect(previewPosts(asked)).toEqual([
     [3340, true],
@@ -906,18 +909,18 @@ test('a service on five ports is asked about three ports a question, each port f
   const reply = JSON.stringify(await $.command.run({ command: 'share-preview', args: '3340 App' } as never))
   // The reply names the questions as the row asks them.
   expect(reply).toContain(
-    'It looks like it also uses localhost:35100, 35101, 35102, 35103 and 35104 · convex-local-backend. Share localhost:35100, 35101 and 35102, and localhost:35103 and 35104 too from the row above the prompt, one at a time.',
+    '이 페이지는 localhost:35100, 35101, 35102, 35103, 35104 · convex-local-backend도 쓰는 것 같습니다. 입력창 위 줄에서 하나씩 localhost:35100, 35101, 35102, localhost:35103, 35104도 공유할 수 있습니다.',
   )
   const questions = [
     {
       ports: [35100, 35101, 35102],
-      words: 'Share localhost:35100, 35101 and 35102 too? convex-local-backend, beside localhost:3340',
-      said: 'Teammates can reach localhost:35100, localhost:35101 and localhost:35102 now. Stop them in Room → Shown.',
+      words: 'localhost:35100, 35101, 35102도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340',
+      said: '이제 손님이 localhost:35100, localhost:35101, localhost:35102 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.',
     },
     {
       ports: [35103, 35104],
-      words: 'Share localhost:35103 and 35104 too? convex-local-backend, beside localhost:3340',
-      said: 'Teammates can reach localhost:35103 and localhost:35104 now. Stop them in Room → Shown.',
+      words: 'localhost:35103, 35104도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340',
+      said: '이제 손님이 localhost:35103, localhost:35104 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.',
     },
   ]
   const forwarded: number[] = []
@@ -926,10 +929,10 @@ test('a service on five ports is asked about three ports a question, each port f
     expect(asked.state.hostAsk?.related.map(s => s.port)).toEqual(ports)
     const drawn = await wordsColumns(ui)
     expect(drawn.before).toBe('')
-    expect(drawn.width).toBe(48)
+    expect(drawn.width).toBe(56)
     expect(drawn.words).toBe(words)
     // Every port the yes forwards, before anything a narrow row cuts.
-    expect(drawn.words.indexOf(' too?')).toBeLessThanOrEqual(drawn.width)
+    expect(drawn.words.indexOf('도 공유할까요?')).toBeLessThanOrEqual(drawn.width)
     await ui.press({ key: 'host-ask-yes' })
     await eventually(asked.clock, () => asked.toasted.includes(said))
     forwarded.push(...ports)
@@ -951,9 +954,9 @@ test("a terminal's question while the room reconnects says so by its dot alone, 
   const drawn = await wordsColumns(ui)
   expect(drawn.before).toBe('●')
   expect(await ui.find({ type: 'Text', text: '●' })).toMatchObject({ props: { color: 'warning' } })
-  expect(drawn.width).toBe(46)
-  expect(drawn.words).toBe('Share localhost:35100, 35101 and 35102 too? convex-local-backend, beside localhost:3340')
-  expect(drawn.words.indexOf(' too?')).toBeLessThanOrEqual(drawn.width)
+  expect(drawn.width).toBe(54)
+  expect(drawn.words).toBe('localhost:35100, 35101, 35102도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340')
+  expect(drawn.words.indexOf('도 공유할까요?')).toBeLessThanOrEqual(drawn.width)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -976,7 +979,7 @@ test('discovery leaves out a page shared through its link: it is never offered a
   const { asked, ui } = await sharingLink($, on, 'http://localhost:3340/', { surfaces: ['desktop'], discover: { 3341: DOCS } })
   const reply = await $.command.run({ command: 'share-preview', args: '3341 Docs' } as never)
   expect(asked.discovered.find(d => d.port === 3341)?.exclude).toEqual([3340])
-  expect(JSON.stringify(reply)).not.toContain('also uses')
+  expect(JSON.stringify(reply)).not.toContain('도 쓰는 것 같습니다')
   await asked.clock.advance(50)
   expect(await ui.find({ key: 'host-ask-yes' })).toBeUndefined()
   expect(asked.posted.filter(e => e.type === 'artifact' && e.body.port === 3340).every(e => e.body.dependency === undefined && e.body.tcp === undefined)).toBe(
@@ -992,7 +995,7 @@ test("a guest's window needing a page shared through its link forwards it as tha
   await within(asked.clock, () => asked.state.shown?.some(s => s.pid === 'pv1'), 5_000)
   stream.splice(1)
   await deliver(asked, stream, [needLine(3340)], () => asked.state.hostAsk)
-  expect(await ui.find({ type: 'Text', text: "'s preview needs localhost:3340 · next-server" })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: '님의 미리보기에 필요한 것: localhost:3340 · next-server' })).toBeDefined()
   await ui.press({ key: 'host-ask-yes' })
   await eventually(asked.clock, () => asked.posted.some(e => e.type === 'artifact' && e.body.port === 3340 && e.body.tcp === true))
   const forwarded = asked.posted.find(e => e.type === 'artifact' && e.body.port === 3340 && e.body.tcp === true)!.body
@@ -1005,10 +1008,10 @@ test("a guest's window needing a page shared through its link forwards it as tha
 // listener its Open started, one of the plugin's own helpers): never shared
 // on, whoever asks, and refused at connection time once it holds a port
 // shared before. Discovery's owner mode says who holds it (`holders`).
-const RELAYED_SAID = (port: number) => `localhost:${port} is another shared session's preview forwarded to this computer, so it can't be shared on.`
+const RELAYED_SAID = (port: number) => `localhost:${port} 포트는 다른 공유 세션의 미리보기가 이 컴퓨터로 전달된 것이라 다시 공유할 수 없어요.`
 
 const RELAYED_NOW = (port: number) =>
-  `Teammates' connections to localhost:${port} are refused: it's another shared session's preview forwarded to this computer now, so it can't be shared on. Stop it in Room → Shown.`
+  `손님의 localhost:${port} 연결을 거절하고 있어요: 지금 이 포트는 다른 공유 세션의 미리보기가 이 컴퓨터로 전달된 것이라 다시 공유할 수 없어요. 방의 「보여 준 것」에서 끝내 주세요.`
 
 test("/share-preview of a port another session's preview holds here shares nothing and says why; the look is kept a while", async ($, on) => {
   const asked = world(on, { surfaces: ['desktop'], holders: { 3340: true }, discover: { 3340: DISCOVERED } })
@@ -1103,7 +1106,7 @@ test("Share too for a port another session's preview holds now forwards nothing,
   await ui.press({ key: 'share-prompt' })
   await $.command.run({ command: 'share-preview', args: '3340 App' } as never)
   await eventually(asked.clock, () => asked.posted.some(e => e.type === 'artifact' && e.body.port === 3340))
-  expect(await ui.find({ type: 'Text', text: 'Share localhost:3610 too? convex-local-backend, beside localhost:3340' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: 'localhost:3610도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3340' })).toBeDefined()
   // While the question waits, another session's Open takes localhost:3610 here.
   holders[3610] = true
   await asked.clock.advance(6_000)
@@ -1111,7 +1114,7 @@ test("Share too for a port another session's preview holds now forwards nothing,
   await eventually(asked.clock, () => asked.toasted.includes(RELAYED_SAID(3610)))
   expect(asked.sent.filter(x => x.path.endsWith('/previews')).map(x => x.body.port)).toEqual([3340])
   expect(asked.posted.some(e => e.type === 'artifact' && e.body.port === 3610)).toBe(false)
-  expect(asked.toasted.some(t => t.startsWith('Teammates can reach localhost:3610'))).toBe(false)
+  expect(asked.toasted.some(t => t.startsWith('이제 손님이 localhost:3610 포트'))).toBe(false)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -1219,8 +1222,8 @@ test("a page shared through its link whose port another session's preview holds 
   expect(asked.proxyFetches).toHaveLength(0)
   const said = proxyPages(asked)[0]!.input!
   expect(said).toContain('\\"status\\":403')
-  expect(said).toContain('another shared session')
-  expect(said).toMatch(/forwarded to [^ ]+ computer, so it can/)
+  expect(said).toContain('다른 공유 세션')
+  expect(said).toMatch(/미리보기로 [^ ]+ 컴퓨터에 포워딩된 것이라 다시 공유할 수 없어요/)
   const refusals = () => asked.spawned.filter(s => s.argv[0] === 'curl' && s.input?.includes('/ws/socket00000001/reject"'))
   await deliver(asked, stream, [{ ws: { id: 'socket00000001', pid: 'pv1', port: 3340, path: '/', protocols: [] } }], () => refusals().length)
   expect(refusals()[0]!.input).toContain('data = "{\\"code\\":\\"CONNECT\\"}"')
@@ -1237,7 +1240,7 @@ for (const look of ["can't tell", 'finds something else there'] as const) {
     await ui.press({ key: 'share' })
     await ui.press({ key: 'share-prompt' })
     expect(await $.command.run({ command: 'share-preview', args: '3340 App' } as never)).toEqual({
-      text: 'Teammates can reach localhost:3340 now. Stop it in Room → Shown.',
+      text: '이제 손님이 localhost:3340 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.',
     })
     expect(asked.owners).toHaveLength(1)
     expect(asked.sent.filter(x => x.path.endsWith('/previews')).map(x => x.body)).toEqual([{ port: 3340, title: 'App', tcp: true }])
@@ -1398,7 +1401,7 @@ test('a host back from a restart shares no page of its history again, and a port
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   await $.session.start(START)
   await asked.clock.advance(500)
-  expect(asked.logged.some(l => l.startsWith('Still sharing this session'))).toBe(true)
+  expect(asked.logged.some(l => l.startsWith('이 세션을 계속 공유하고 있습니다'))).toBe(true)
   expect(asked.sent.filter(x => x.path.endsWith('/previews')).map(x => x.body.port)).toEqual([])
   expect(asked.state.hostMemory?.stopped).toEqual([3340])
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1427,7 +1430,7 @@ test('a room shared Only from now on shares no dev server Claude gave out before
   await $.session.end({ reason: 'other', sessionId: 'session-test-0001', resume: {} } as never)
   await $.session.start(START)
   await asked.clock.advance(500)
-  expect(asked.logged.some(l => l.startsWith('Still sharing this session'))).toBe(true)
+  expect(asked.logged.some(l => l.startsWith('이 세션을 계속 공유하고 있습니다'))).toBe(true)
   expect(previews()).toEqual([])
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })

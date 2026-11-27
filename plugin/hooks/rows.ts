@@ -164,7 +164,7 @@ function clip(text: string, lines: number, chars: number): string {
   let out = all.slice(0, lines).join('\n')
   if (out.length > chars) out = `${out.slice(0, chars)}…`
   const more = all.length - lines
-  return more > 0 ? `${out}\n… +${more} lines` : out
+  return more > 0 ? `${out}\n… +${more}줄` : out
 }
 
 function relative(path: unknown, cwd: string): string {
@@ -209,7 +209,7 @@ export function summarizeTool(name: string, input: unknown, cwd: string): { text
     case 'Task':
       return { text: str(i.description) }
     case 'TodoWrite':
-      return { text: `${Array.isArray(i.todos) ? i.todos.length : 0} todos` }
+      return { text: `할 일 ${Array.isArray(i.todos) ? i.todos.length : 0}개` }
     default: {
       const json = JSON.stringify(input ?? {})
       return { text: json.length > 120 ? `${json.slice(0, 120)}…` : json }
@@ -247,7 +247,7 @@ export function rowsFromMessage(message: { role?: string; type?: string; isMeta?
         const media = imagesOf(block.content)
         rows.push({
           kind: 'result',
-          text: text ? clip(text, RESULT_LINES, RESULT_CHARS) : media.length ? '' : '(no output)',
+          text: text ? clip(text, RESULT_LINES, RESULT_CHARS) : media.length ? '' : '(출력 없음)',
           isError: block.is_error === true || undefined,
           id: block.tool_use_id,
           ...(media.length ? { media } : {}),

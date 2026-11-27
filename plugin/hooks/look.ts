@@ -160,12 +160,12 @@ export function cloverSvg(width = 96): string {
 /** "3m ago" style ages for activity and chat. */
 export function ago(ts: number, now: number): string {
   const s = Math.max(0, Math.round((now - ts) / 1000))
-  if (s < 10) return 'just now'
-  if (s < 60) return `${s}s ago`
+  if (s < 10) return '방금'
+  if (s < 60) return `${s}초 전`
   const m = Math.round(s / 60)
-  if (m < 60) return `${m}m ago`
+  if (m < 60) return `${m}분 전`
   const h = Math.round(m / 60)
-  return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`
+  return h < 24 ? `${h}시간 전` : `${Math.round(h / 24)}일 전`
 }
 
 /** Glyph per tool, for compact lines a guest's transcript shows. */

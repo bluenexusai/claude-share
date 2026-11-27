@@ -136,7 +136,7 @@ type UI = Elements[RenderSurface]
 const PLUGIN = 'shared-session'
 const ROOM = 'shared-room' // the Room panel's id
 const TEAM = 'shared-team' // the Team panel's id
-const ASK_HEADER = 'Shared' // marks the approval question this plugin asks
+const ASK_HEADER = '공유 세션' // marks the approval question this plugin asks
 // How this session hears about the room. While a plugin has a request in
 // flight, the engine holds every prompt after the first until it returns, so
 // the plugin never long-polls. Instead a `curl` child, whose open stream holds
@@ -401,7 +401,7 @@ class NetworkError extends Error {}
 let configuredServer = ''
 
 const NO_SERVER =
-  'Sharing needs a share server, and none is set up yet. Run your own (README: "Host a server"), then set it with `/plugin configure shared-session` or the SHARED_SESSION_SERVER environment variable. Joining a link someone sent you needs nothing.'
+  '공유하려면 공유 서버가 필요한데, 아직 설정된 서버가 없습니다. 직접 서버를 띄운 뒤(README의 "Host a server") `/plugin configure shared-session` 또는 SHARED_SESSION_SERVER 환경 변수로 설정하세요. 받은 링크로 참여할 때는 아무것도 필요 없습니다.'
 
 // ---------------------------------------------------------------------------
 // Updates. The plugin says its version on every request: the server turns a
@@ -442,13 +442,13 @@ async function noteLatest($: $, latest: unknown) {
   if (live === 'running') return void selfUpdate($, latest)
   if (live === 'pinned') {
     return void $.ui.log(
-      `Shared Sessions ${latest} is out (this session runs ${mine}). Claude Desktop runs the copy installed from your local marketplace folder, so a release loads only when you quit and reopen it. To have releases load in place, add the marketplace from GitHub: ${await switchCommand($)}`,
+      `공유 세션 ${latest} 버전이 나왔습니다(이 세션은 ${mine}). Claude Desktop은 로컬 마켓플레이스 폴더에 설치된 사본을 쓰기 때문에, 새 버전은 앱을 종료했다가 다시 열어야 적용됩니다. 새 버전을 바로 적용하려면 GitHub에서 마켓플레이스를 추가하세요: ${await switchCommand($)}`,
     )
   }
   $.ui.log(
     auto
-      ? `Shared Sessions ${latest} is out (this session runs ${mine}). It installs by itself; new sessions get it${live === 'next' ? ', and from then on updates load without a restart' : ''}.`
-      : `Shared Sessions ${latest} is out (this session runs ${mine}). Turn on Updates in the Room, or run: ${UPDATE_COMMAND}`,
+      ? `공유 세션 ${latest} 버전이 나왔습니다(이 세션은 ${mine}). 자동으로 설치되며 새 세션부터 적용됩니다${live === 'next' ? '. 그다음부터는 다시 시작하지 않아도 업데이트가 바로 적용됩니다' : ''}.`
+      : `공유 세션 ${latest} 버전이 나왔습니다(이 세션은 ${mine}). 방 설정에서 업데이트를 자동으로 바꾸거나 다음 명령을 실행하세요: ${UPDATE_COMMAND}`,
   )
 }
 
@@ -567,7 +567,7 @@ async function selfUpdate($: $, latest: string) {
   )
   const got = /version=(\S+)/.exec(fetched.out)?.[1]
   const apply = Boolean(got && newerThan(got, mine))
-  if (apply) $.ui.log(`Updating Shared Sessions to ${got}. It reloads in place; nothing to restart.`)
+  if (apply) $.ui.log(`공유 세션을 ${got} 버전으로 업데이트합니다. 바로 적용되니 다시 시작할 필요가 없습니다.`)
   if (got) {
     await sh(
       $,
@@ -589,7 +589,7 @@ async function selfUpdate($: $, latest: string) {
     // otherwise keep this session on its version unseen.
     if (!got && !/busy/.test(fetched.out) && failedFor !== latest) {
       failedFor = latest
-      $.ui.log(`Shared Sessions ${latest} is out, but this machine couldn't download it. Run: ${UPDATE_COMMAND} — the next session picks it up.`)
+      $.ui.log(`공유 세션 ${latest} 버전이 나왔지만 이 컴퓨터에서 내려받지 못했습니다. 다음 명령을 실행하면 다음 세션부터 적용됩니다: ${UPDATE_COMMAND}`)
     }
   }
 }
@@ -614,7 +614,7 @@ async function catchUpFromInstalled($: $) {
   }
   const version = typeof installed?.version === 'string' ? installed.version : ''
   if (!version || !newerThan(version, mine) || typeof installed?.installPath !== 'string') return
-  $.ui.log(`Updating Shared Sessions to ${version} from the installed copy. It reloads in place; nothing to restart.`)
+  $.ui.log(`설치된 사본에서 공유 세션을 ${version} 버전으로 업데이트합니다. 바로 적용되니 다시 시작할 필요가 없습니다.`)
   await sh(
     $,
     [
@@ -642,7 +642,7 @@ async function serverTraces($: $): Promise<boolean> {
     return false
   }
 }
-const keptNote = (team: string | null) => `This server keeps its turns: ${team ? `everyone in ${team}` : 'you'} can search them later.`
+const keptNote = (team: string | null) => `이 서버는 대화 기록을 보관합니다. 나중에 ${team ? `${team} 팀 모두가` : '본인이'} 검색할 수 있습니다.`
 
 // What the server says is newest, asked now and then: a long-open session
 // learns of a release without sharing or joining anything.
@@ -735,7 +735,7 @@ async function readUpdates($: $) {
   // marketplace's autoUpdate), or the folder named for them gone: in place now.
   const missing = named && dir ? !(await $.fs.exists(`${dir}/.claude-plugin/plugin.json`).catch(() => true)) : false
   if (on && (!named || missing) && !runsLive($) && (await enableLive($))) {
-    $.ui.log('Shared Sessions now updates in place: from your next new session on, a release loads without a restart.')
+    $.ui.log('이제 공유 세션이 제자리에서 업데이트됩니다. 다음 새 세션부터는 다시 시작하지 않아도 새 버전이 적용됩니다.')
   }
 }
 
@@ -748,7 +748,7 @@ async function writeUpdates($: $, on: boolean) {
   try {
     if (await $.fs.exists(path)) settings = JSON.parse(await $.fs.read(path))
   } catch {
-    $.ui.toast(`Couldn't read ${path}, so nothing changed`)
+    $.ui.toast(`${path} 파일을 읽지 못해 아무것도 바꾸지 않았어요`)
     return
   }
   const known = (settings.extraKnownMarketplaces ?? {}) as Record<string, Record<string, unknown>>
@@ -757,17 +757,17 @@ async function writeUpdates($: $, on: boolean) {
   try {
     await $.fs.write(path, `${JSON.stringify(settings, null, 2)}\n`)
   } catch {
-    $.ui.toast("Couldn't change it here: use /plugin → Marketplaces → claude-share")
+    $.ui.toast("여기서는 바꾸지 못했어요. /plugin → Marketplaces → claude-share 에서 바꿔 주세요")
     return
   }
   await update($, updatesA, () => on)
   if (on) {
     const live = await enableLive($)
-    $.ui.toast(live ? (runsLive($) ? 'Updates: automatic, in place' : 'Updates: automatic. New sessions update in place') : 'Updates: automatic')
+    $.ui.toast(live ? (runsLive($) ? '업데이트: 자동, 바로 적용' : '업데이트: 자동. 새 세션부터 바로 적용돼요') : '업데이트: 자동')
   } else {
     await nameLiveDir($, false)
     await update($, liveUpdatesA, () => (runsLive($) ? 'running' : null))
-    $.ui.toast(runsLive($) ? 'Updates: manual, from your next new session on' : 'Updates: manual')
+    $.ui.toast(runsLive($) ? '업데이트: 수동, 다음 새 세션부터' : '업데이트: 수동')
   }
 }
 
@@ -802,14 +802,14 @@ function secureServer(url: string): boolean {
 class PlainServer extends Error {
   constructor(url: string) {
     super(
-      `The share server ${url} is plain http, which would send everyone's tokens unencrypted. Use its https:// address (plain http works only for a server on this computer).`,
+      `공유 서버 주소 ${url}가 암호화되지 않은 http라서 모두의 토큰이 암호화 없이 전송됩니다. https:// 주소를 쓰세요(http는 이 컴퓨터에서 돌리는 서버에만 쓸 수 있습니다).`,
     )
   }
 }
 // A room saved on such a server isn't taken up again (`resumeHosting`,
 // `resumeJoined`): its token would go with the first request.
 const plainSaved = (server: string) =>
-  `This session's room is on ${server}, plain http, which would send its tokens unencrypted, so it isn't taken up again. Share or join again through an https:// server.`
+  `이 세션의 방은 암호화되지 않은 http 서버(${server})에 있어 토큰이 암호화 없이 전송되므로 다시 이어 가지 않습니다. https:// 서버로 다시 공유하거나 참여하세요.`
 let myName: string | undefined
 // An entry held (`hold`) waits for its pictures to go up, and what follows it waits too.
 let outbox: { type: string; body: Record<string, unknown>; hold?: boolean }[] = []
@@ -892,16 +892,16 @@ type RunWords = {
 }
 const SAY: Record<RunOwner, RunWords> = {
   listener: {
-    unreachable: (_host, port) => `Couldn't forward localhost:${port}. Press Open in the Room to try again.`,
-    busy: 'Preview connection or request limit reached. Close unused preview tabs or wait a minute, then retry.',
-    refused: 'Preview authorization was refused. Press Open in the Room to reconnect.',
-    connect: () => 'The last channel could not connect to the host target. Mapping retained; target unverified.',
+    unreachable: (_host, port) => `localhost:${port} 연결을 전달하지 못했어요. 방에서 열기를 눌러 다시 시도해 주세요.`,
+    busy: '미리보기 연결 수나 요청 수가 한도에 닿았어요. 쓰지 않는 미리보기 탭을 닫거나 1분 뒤에 다시 시도해 주세요.',
+    refused: '미리보기 접근이 거부됐어요. 방에서 열기를 눌러 다시 연결해 주세요.',
+    connect: () => '마지막 연결이 방장 쪽 대상에 닿지 못했어요. 연결 설정은 그대로 두었고, 대상은 확인하지 못했어요.',
   },
   window: {
-    unreachable: (host, port) => `Couldn't reach ${host}'s localhost:${port} for the preview window. Press Open preview to try again.`,
-    busy: 'The preview window reached its connection or request limit. Close unused tabs in it or wait a minute, then reload the page.',
-    refused: "The preview window's authorization was refused. Press Open preview to reconnect.",
-    connect: (host, port) => `The preview window couldn't connect to ${host}'s localhost:${port}. Check that it's running there, then reload the page.`,
+    unreachable: (host, port) => `미리보기 창에서 ${host}님의 localhost:${port}에 연결하지 못했어요. 미리보기 열기를 눌러 다시 시도해 주세요.`,
+    busy: '미리보기 창의 연결 수나 요청 수가 한도에 닿았어요. 창에서 쓰지 않는 탭을 닫거나 1분 뒤에 페이지를 새로 고쳐 주세요.',
+    refused: "미리보기 창의 접근이 거부됐어요. 미리보기 열기를 눌러 다시 연결해 주세요.",
+    connect: (host, port) => `미리보기 창이 ${host}님의 localhost:${port}에 연결하지 못했어요. 그쪽에서 실행 중인지 확인한 뒤 페이지를 새로 고쳐 주세요.`,
   },
 }
 
@@ -1271,7 +1271,7 @@ async function api<T>($: $, server: string, path: string, init: { method?: strin
   } catch {}
   if (!res.ok) throw new ApiError(typeof data.error === 'string' ? data.error : `HTTP ${res.status}`, res.status, data)
   // An answer cut short (over the engine's 4 MiB) is a failure, never an empty one.
-  if (!parsed) throw new ApiError("the share server's answer didn't come through whole", 502)
+  if (!parsed) throw new ApiError("공유 서버의 응답이 끝까지 오지 않았습니다", 502)
   return data as T
 }
 
@@ -1327,7 +1327,7 @@ async function stillSeated($: $, room: ShareRoom, status: number): Promise<boole
     if (!again.gone) return true // the server didn't answer: try again later
     await closeRoom($, 'ended', {
       room,
-      log: again.why && !/no longer shared/i.test(again.why) ? `Left ${room.host}'s session: ${again.why}` : `${room.host}'s session is no longer shared.`,
+      log: again.why && !/no longer shared/i.test(again.why) ? `${room.host}님의 세션에서 나왔습니다: ${again.why}` : `${room.host}님의 세션 공유가 끝났습니다.`,
     })
     return false
   }
@@ -1338,10 +1338,10 @@ async function stillSeated($: $, room: ShareRoom, status: number): Promise<boole
   await closeRoom($, 'ended', {
     room,
     log: leftHere
-      ? `You left ${room.host}'s session from the Team panel.`
+      ? `팀 패널에서 ${room.host}님의 세션을 나갔습니다.`
       : mode === 'guest'
-        ? `${room.host}'s session is no longer shared.`
-        : 'Sharing ended: the room closed on the server. Press Share to start a new one.',
+        ? `${room.host}님의 세션 공유가 끝났습니다.`
+        : '공유가 끝났습니다. 서버에서 방이 닫혔습니다. 새로 공유하려면 공유하기를 누르세요.',
   })
   return false
 }
@@ -1555,7 +1555,7 @@ function tooLarge($: $, batch: { type: string; body: Record<string, unknown> }[]
   if (singly) singly -= 1
   const pid = batch[0]?.type === 'prompt' ? batch[0].body.pid : undefined
   if (typeof pid === 'string' && ownPending.delete(pid)) unsent.set(pid, null)
-  noteOnce($, 'too-large', 'A message was too large to send to the room.', scope)
+  noteOnce($, 'too-large', '메시지가 너무 커서 방에 보내지 못했어요.', scope)
 }
 
 // Starts hearing about the room: the stream, or polls where it can't run.
@@ -1789,13 +1789,13 @@ async function hostResult($: $, room: ShareRoom, call: { hostId: string; seq: nu
       if (event.type === 'row' && row.kind === 'result' && row.id === call.hostId)
         return withImages($, room, `${row.isError ? 'Error: ' : ''}${stripLineNumbers(row.text)}`, row.images)
       if (event.type === 'turn' && event.body.state === 'end' && (!call.turnId || event.body.turnId === call.turnId))
-        return "(the host's turn ended before this finished)"
-      if (event.type === 'ended') return '(sharing ended)'
+        return "(이 작업이 끝나기 전에 방장의 답이 끝났습니다)"
+      if (event.type === 'ended') return '(공유가 끝났습니다)'
     }
-    if (page?.ended) return '(sharing ended)'
+    if (page?.ended) return '(공유가 끝났습니다)'
     if (!page) await pause($, 500)
   }
-  return signal.aborted ? '(stopped)' : '(still running on the host)'
+  return signal.aborted ? '(stopped)' : '(방장 쪽에서 아직 실행 중입니다)'
 }
 
 // Guest: the tool host calls are drawn as. Only a joined session has it.
@@ -1904,8 +1904,8 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
       const back = (lostAt.get(who) ?? -Infinity) > event.ts - 30 * 60_000
       lostAt.delete(who)
       if (live && !mine && !back) {
-        $.ui.log(`${who} joined`)
-        void cue($, 'join', `${who} joined your session`)
+        $.ui.log(`${who}님이 들어왔습니다`)
+        void cue($, 'join', `${who}님이 세션에 들어왔습니다`)
       }
       break
     }
@@ -1917,7 +1917,7 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
       const removed = body.reason === 'removed'
       await note({ ts: event.ts, who, kind: 'leave', text: lost ? 'timeout' : removed ? 'removed' : undefined })
       if (lost) lostAt.set(who, event.ts)
-      else if (live && !mine) $.ui.log(removed ? `${who} left: no longer in the team` : `${who} left`)
+      else if (live && !mine) $.ui.log(removed ? `${who}님이 나갔습니다: 이제 팀원이 아닙니다` : `${who}님이 나갔습니다`)
       break
     }
     case 'prompt':
@@ -2122,7 +2122,7 @@ function shownDrawn(list: readonly ShareShown[]): ShareShown[] {
 // A preview's line in Shown: its title, and whose it is when it was shared
 // for another page's sake (an API that page calls).
 const previewName = (title: unknown, dependency: number | true | undefined) =>
-  `${typeof title === 'string' && title ? title : 'localhost'}${dependency === undefined ? ' (preview)' : ` · used by ${dependency === true ? 'previews' : `localhost:${dependency}`}`}`
+  `${typeof title === 'string' && title ? title : 'localhost'}${dependency === undefined ? ' (미리보기)' : ` · ${dependency === true ? '미리보기용' : `localhost:${dependency} 미리보기용`}`}`
 
 // What a preview was forwarded as: forwarded at all, the page it's for, its
 // address's spelling and its scheme. Absent fields stay absent.
@@ -2147,12 +2147,12 @@ function shownOf(event: ServerEvent): ShareShown | null {
     kind === 'preview'
       ? previewName(body.title, dependency)
       : kind === 'widget'
-        ? `a widget${typeof body.title === 'string' ? `: ${body.title.replaceAll('_', ' ')}` : ''}`
+        ? `위젯${typeof body.title === 'string' ? `: ${body.title.replaceAll('_', ' ')}` : ''}`
         : kind === 'link'
-          ? String(body.url ?? 'a page')
+          ? String(body.url ?? '페이지')
           : files?.some(f => f.path) && files.length > 1
-            ? `${files[0]!.name} (a page and ${files.length - 1} ${files.length === 2 ? 'file' : 'files'})`
-            : (files ?? []).map(f => f.name).join(', ') || 'a file'
+            ? `${files[0]!.name} (페이지 1개, 파일 ${files.length - 1}${files.length === 2 ? '개' : '개'})`
+            : (files ?? []).map(f => f.name).join(', ') || '파일'
   return {
     key: kind === 'preview' && typeof body.pid === 'string' ? `preview:${body.pid}` : `seq:${event.seq}`,
     kind,
@@ -2403,7 +2403,7 @@ async function sessionLink($: $): Promise<string> {
 async function systemNotify($: $, title: string, body: string, open = ''): Promise<boolean> {
   const as = (text: string) => `"${text.slice(0, 200).replace(/[\\"]/g, c => `\\${c}`)}"`
   const osa = `osascript -e ${sq(`display notification ${as(body)} with title ${as(title)} subtitle "Shared Sessions"`)} >/dev/null 2>&1`
-  const app = ['--title', title.slice(0, 200), '--subtitle', 'Shared Sessions', '--body', body.slice(0, 400), ...(open ? ['--open', open] : [])].map(sq).join(' ')
+  const app = ['--title', title.slice(0, 200), '--subtitle', '공유 세션', '--body', body.slice(0, 400), ...(open ? ['--open', open] : [])].map(sq).join(' ')
   const ran = await sh(
     $,
     [
@@ -2551,7 +2551,7 @@ async function refreshStatus($: $) {
   statusShown = true
   const here = [...new Set(v.everyone.filter(p => p.online).map(p => p.name))]
   const w = v.working
-  $.ui.status(`● Live · ${v.mode === 'host' ? 'sharing' : `${v.room.host}'s session`} · ${listNames(here)} here${w ? ` · Claude for ${w.by}` : ''}`)
+  $.ui.status(`● 실시간 · ${v.mode === 'host' ? '공유 중' : `${v.room.host}님의 세션`} · ${listNames(here)} 접속 중${w ? ` · Claude가 ${w.by}님 요청 처리 중` : ''}`)
 }
 
 async function setPrefs($: $, change: Partial<SharePrefs>) {
@@ -2601,14 +2601,14 @@ async function updateHere($: $): Promise<{ ok: boolean; text: string }> {
   const mine = await ownVersion($)
   if (runsLive($) && installed && newerThan(installed, mine)) {
     await catchUpFromInstalled($)
-    return say(true, `Shared Sessions ${installed} is installed here and loads into this session in place.`)
+    return say(true, `공유 세션 ${installed} 버전이 설치되어 이 세션에 바로 적용됩니다.`)
   }
   if (installed && newerThan(installed, mine))
     return say(
       true,
-      `Shared Sessions ${installed} is installed here. Start a new session to use it (in Claude Desktop, quit and reopen the app); with Updates on in the Room, later releases load in place.`,
+      `공유 세션 ${installed} 버전이 설치되었습니다. 새 세션을 시작하면 적용됩니다(Claude Desktop에서는 앱을 종료했다가 다시 여세요). 방 설정에서 업데이트를 자동으로 켜 두면 이후 새 버전은 바로 적용됩니다.`,
     )
-  return say(true, `Shared Sessions is up to date here (${installed || mine}).`)
+  return say(true, `이 컴퓨터의 공유 세션이 최신 버전입니다(${installed || mine}).`)
 }
 
 // The Update button (the Team panel's header, the Room's Settings): the
@@ -2618,7 +2618,7 @@ async function updateHere($: $): Promise<{ ok: boolean; text: string }> {
 async function pressUpdate($: $) {
   if ((await read($, updatingA))?.state === 'running') return
   await update($, updatingA, () => ({ state: 'running' }))
-  const done = await updateHere($).catch(error => ({ ok: false, text: `Couldn't update Shared Sessions here: ${String((error as Error)?.message ?? error)}` }))
+  const done = await updateHere($).catch(error => ({ ok: false, text: `여기서 공유 세션을 업데이트하지 못했습니다: ${String((error as Error)?.message ?? error)}` }))
   const at = await $.clock.now()
   await update($, updatingA, () => ({ state: 'done' as const, ...done, at }))
   // The line goes after two minutes (a module a reload replaced loses this
@@ -2641,7 +2641,7 @@ async function updateRow($: $, el: UI, compact: boolean) {
   if (updating?.state === 'running')
     return (
       <Text key="updating" dimColor>
-        Updating Shared Sessions…
+        공유 세션 업데이트 중…
       </Text>
     )
   if (updating?.state === 'done' && now - updating.at < 120_000) {
@@ -2655,9 +2655,9 @@ async function updateRow($: $, el: UI, compact: boolean) {
         {updating.ok || compact ? null : (
           <Button
             key="copy-update"
-            label="Copy update command"
+            label="업데이트 명령 복사"
             plain
-            onPress={press => void copyText($, UPDATE_COMMAND, 'Update command copied: paste it in a terminal', press.surface)}
+            onPress={press => void copyText($, UPDATE_COMMAND, '업데이트 명령을 복사했어요. 터미널에 붙여 넣으세요', press.surface)}
           />
         )}
       </Box>
@@ -2669,13 +2669,13 @@ async function updateRow($: $, el: UI, compact: boolean) {
     <Box key="update" flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
       <Box flexShrink={1} minWidth={0}>
         <Text color="claude" wrap="truncate-end">
-          {compact ? `● ${newer} is out` : `● Version ${newer} is out (this session runs ${mine})`}
+          {compact ? `● ${newer} 버전 출시` : `● ${newer} 버전 출시 (이 세션은 ${mine})`}
         </Text>
       </Box>
       <Box flexShrink={0} flexDirection="row" gap={1}>
         {[
-          <Button key="update-now" label={inPlace ? 'Update and load here' : 'Install update'} variant="primary" onPress={() => void pressUpdate($)} />,
-          compact || updates ? null : <Button key="updates-on" label="Turn on Updates" plain dimColor onPress={() => void writeUpdates($, true)} />,
+          <Button key="update-now" label={inPlace ? '업데이트하고 바로 적용' : '업데이트 설치'} variant="primary" onPress={() => void pressUpdate($)} />,
+          compact || updates ? null : <Button key="updates-on" label="자동 업데이트 켜기" plain dimColor onPress={() => void writeUpdates($, true)} />,
         ]}
       </Box>
     </Box>
@@ -2701,7 +2701,7 @@ async function noteBehind($: $, people: SharePerson[]) {
     notedBehind.add(`${p.name}@${p.version}`)
     if (!latest || !newerThan(latest, p.version!)) continue
     $.ui.log(
-      `${p.name} runs Shared Sessions ${p.version}, older than ${latest}: some of what you show (pictures, pages) may not reach them as it does here. They update with: ${UPDATE_COMMAND}`,
+      `${p.name}님은 공유 세션 ${p.version} 버전을 쓰고 있어 ${latest}보다 오래되었습니다. 보여 주는 것 일부(그림, 페이지)가 여기처럼 전달되지 않을 수 있습니다. 업데이트 명령: ${UPDATE_COMMAND}`,
     )
   }
 }
@@ -2716,7 +2716,7 @@ async function receive($: $, mode: ShareMode, room: ShareRoom, page: EventsPage)
   if (mode === 'host') await noteBehind($, page.people)
   const hostIs = page.people.find(p => p.role === 'host')?.online
   if (mode === 'guest' && hostWas !== undefined && hostIs !== undefined && hostWas !== hostIs) {
-    $.ui.toast(hostIs ? `${room.host} is back` : `${room.host}'s Claude Code closed; the room waits for them`)
+    $.ui.toast(hostIs ? `${room.host}님이 돌아왔어요` : `${room.host}님의 Claude Code가 닫혔어요. 방은 돌아올 때까지 기다려요`)
   }
   // What's shared now, before the page's events: an artifact among them
   // shows a preview the list has.
@@ -2753,7 +2753,7 @@ async function receive($: $, mode: ShareMode, room: ShareRoom, page: EventsPage)
         if (mode === 'guest' && !(typeof body.turnId === 'string' && hostTurns.some(t => t.turnId === body.turnId))) {
           const shown = shownOf(event)
           if (shown) {
-            laterRides.push({ text: `${room.host} shared ${shown.name}`, ride: { kind: 'artifact', event } })
+            laterRides.push({ text: `${room.host}님이 공유했습니다: ${shown.name}`, ride: { kind: 'artifact', event } })
             scheduleRides($)
           }
         }
@@ -2819,7 +2819,7 @@ async function receive($: $, mode: ShareMode, room: ShareRoom, page: EventsPage)
         }
         break
       case 'ended':
-        await closeRoom($, 'ended', { room, log: mode === 'guest' ? `${room.host} stopped sharing this session.` : 'This shared session ended.' })
+        await closeRoom($, 'ended', { room, log: mode === 'guest' ? `${room.host}님이 이 세션 공유를 끝냈습니다.` : '이 공유 세션이 끝났습니다.' })
         return
     }
   }
@@ -2995,7 +2995,7 @@ async function closeSteps($: $, s: RoomScope, live: boolean, how: Exit, opts: Ex
       await writeRoomCheckpoint($, place, guest ? await joinedPlace($, room) : await hostingPlace($, room))
     } catch (error) {
       $.ui.log(
-        `${guest ? "Couldn't save the joined session for reopening" : "Couldn't save the shared session for reopening"}: ${String((error as Error)?.message ?? error)}`,
+        `${guest ? "참여한 세션을 다시 열 수 있게 저장하지 못했습니다" : "공유한 세션을 다시 열 수 있게 저장하지 못했습니다"}: ${String((error as Error)?.message ?? error)}`,
       )
     }
   } else if (how !== 'ended') await deleteRoomCheckpoint($, place).catch(() => {})
@@ -3024,7 +3024,7 @@ async function closeSteps($: $, s: RoomScope, live: boolean, how: Exit, opts: Ex
   await update($, closingA, () => null)
   closeMark = 'down'
   // 7.
-  const said = how === 'ended' ? opts.log : how === 'keep' ? undefined : guest ? `Left ${room.host}'s session.` : 'Stopped sharing. The link no longer works.'
+  const said = how === 'ended' ? opts.log : how === 'keep' ? undefined : guest ? `${room.host}님의 세션에서 나왔습니다.` : '공유를 끝냈습니다. 이제 링크가 작동하지 않습니다.'
   if (said) $.ui.log(said)
   // What can wait, last in the bound: a window still opening closes what it
   // started, and left for good, the room's profile goes again (anything a
@@ -3132,18 +3132,18 @@ function newId(): string {
 }
 
 function describePolicy(policy: SharePolicy): string {
-  if (policy.files === 'off') return `${describePolicyCore(policy)}, files kept to the host`
+  if (policy.files === 'off') return `${describePolicyCore(policy)}, 파일은 방장만`
   return describePolicyCore(policy)
 }
 
 function describePolicyCore(policy: SharePolicy): string {
-  const prompts = policy.prompts === 'watch' ? 'watch-only' : 'everyone can prompt'
+  const prompts = policy.prompts === 'watch' ? '보기만' : '모두 요청 가능'
   const approvals =
     policy.approvals === 'none'
-      ? 'no approvals'
+      ? '허용 묻지 않음'
       : policy.approvals === 'all'
-        ? 'every tool needs approval'
-        : 'anything beyond reading the project needs approval'
+        ? '모든 도구에 허용 필요'
+        : '프로젝트 읽기 외에는 허용 필요'
   return `${prompts}, ${approvals}`
 }
 
@@ -3271,7 +3271,7 @@ async function setPinned($: $, pinned: boolean, attempt = 0) {
 async function allowTools($: $, tools: readonly string[], said: string): Promise<boolean> {
   const found = await readSettings($)
   if (!found) {
-    $.ui.toast(`Couldn't read ${(await settingsFile($)) ?? 'your Claude Code settings'}, so nothing changed`)
+    $.ui.toast(`${(await settingsFile($)) ?? 'Claude Code 설정'} 파일을 읽지 못해 아무것도 바꾸지 않았어요`)
     return false
   }
   const permissions = { ...((found.settings.permissions ?? {}) as Record<string, unknown>) }
@@ -3280,7 +3280,7 @@ async function allowTools($: $, tools: readonly string[], said: string): Promise
   try {
     await $.fs.write(found.path, `${JSON.stringify({ ...found.settings, permissions }, null, 2)}\n`)
   } catch {
-    $.ui.toast(`Couldn't change ${found.path}`)
+    $.ui.toast(`${found.path} 파일을 바꾸지 못했어요`)
     return false
   }
   $.ui.toast(said)
@@ -3289,7 +3289,7 @@ async function allowTools($: $, tools: readonly string[], said: string): Promise
 
 // Allow pinning: rules for the sidebar tools above; then it pins.
 async function allowDeskTools($: $) {
-  if (await allowTools($, DESK_TOOLS, 'Pinning allowed: shared sessions pin themselves again')) await setPinned($, true, 2)
+  if (await allowTools($, DESK_TOOLS, '고정을 허용했어요. 이제 공유 세션이 다시 자동으로 고정돼요')) await setPinned($, true, 2)
 }
 
 // Marks this session's row: retitles it (keeping what it was) and pins it.
@@ -3536,7 +3536,7 @@ async function share($: $, surface?: RenderSurface, opts: ShareOpts = {}): Promi
 // The room made, and this session sharing it (or the one it shares already).
 async function makeRoom($: $, surface: RenderSurface | undefined, opts: ShareOpts): Promise<ShareRoom> {
   const mode = await read($, modeA)
-  if (mode === 'guest') throw new Error('Leave the session you joined before sharing this one.')
+  if (mode === 'guest') throw new Error('이 세션을 공유하려면 먼저 참여한 세션에서 나가세요.')
   await update($, askingA, () => null)
   const existing = await read($, roomA)
   if (mode === 'host' && existing) {
@@ -3605,13 +3605,13 @@ async function makeRoom($: $, surface: RenderSurface | undefined, opts: ShareOpt
   void shareLocal($, localOpens(messages)).catch(() => {})
   startFeed($)
   const copied = await $.ui.copy({ text: room.url, surface }).catch(() => ({ isCopied: false }))
-  const watchOnly = opts.watch ? ', watch-only' : ''
+  const watchOnly = opts.watch ? ' (보기만)' : ''
   $.ui.toast(
-    copied.isCopied ? `Sharing${room.team ? ` with ${room.team.name}` : ''}${watchOnly} · link copied` : `Sharing${watchOnly} · the link is in the transcript`,
+    copied.isCopied ? `${room.team ? `${room.team.name} 팀과 ` : ''}공유 중${watchOnly} · 링크를 복사했어요` : `공유 중${watchOnly} · 링크는 대화에 남겨 두었어요`,
   )
   const access = room.team ? ((await read($, teamsA)).teams.find(x => x.id === room.team?.id) ?? null) : null
   $.ui.log(
-    `Sharing${opts.history === false ? ' from now on' : ''}${room.team ? ` with ${room.team.name}` : ''}${watchOnly}. ${whoJoins(room, access, opts.watch)}: ${room.url}`,
+    `${opts.history === false ? '지금부터 ' : ''}${room.team ? `${room.team.name} 팀과 ` : ''}공유합니다${watchOnly}. ${whoJoins(room, access, opts.watch)}: ${room.url}`,
   )
   if (room.team) void refreshTeams($).catch(() => {})
   void holdRoom($).catch(() => {})
@@ -3632,25 +3632,25 @@ async function copyText($: $, text: string, done: string, surface?: RenderSurfac
 async function pressInvite($: $, url: string, surface?: RenderSurface) {
   const t = await read($, teamsA)
   if (!t.account) {
-    $.ui.toast('Sign in to invite teammates: the Team panel shows how')
+    $.ui.toast('팀원을 초대하려면 로그인하세요. 방법은 팀 패널에 있어요')
     return openTeam($)
   }
   const people = await read($, peopleA)
   const mates = (t.teammates ?? []).filter(m => !people.some(p => p.online && p.name === m.name))
   if (!mates.length) {
     const copied = await $.ui.copy({ text: url, surface }).catch(() => ({ isCopied: false }))
-    $.ui.toast(copied.isCopied ? 'No teammates to invite here yet · link copied' : 'No teammates to invite here yet: share the link instead')
-    if (!copied.isCopied) $.ui.log(`The share link: ${url}`)
+    $.ui.toast(copied.isCopied ? '아직 초대할 팀원이 없어요 · 링크를 복사했어요' : '아직 초대할 팀원이 없어요. 대신 링크를 공유하세요')
+    if (!copied.isCopied) $.ui.log(`공유 링크: ${url}`)
     return
   }
   await update($, roomTabA, () => 'people')
-  $.ui.toast(`Invite ${mates.length === 1 ? (mates[0]?.name ?? 'your teammate') : `any of ${mates.length} teammates`} below`)
+  $.ui.toast(`아래에서 초대할 수 있어요: ${mates.length === 1 ? (mates[0]?.name ?? '팀원') : `팀원 ${mates.length}명`}`)
 }
 
 async function copyLink($: $, url: string, surface?: RenderSurface) {
   const copied = await $.ui.copy({ text: url, surface }).catch(() => ({ isCopied: false }))
-  if (copied.isCopied) $.ui.toast('Link copied')
-  else $.ui.log(`The share link: ${url}`)
+  if (copied.isCopied) $.ui.toast('링크를 복사했어요')
+  else $.ui.log(`공유 링크: ${url}`)
 }
 
 // Stop sharing ends the room for everyone: the first press asks, a second
@@ -3700,7 +3700,7 @@ type RoomCheckpointFile = { version: 1; value: RoomCheckpoint | null }
 
 async function roomCheckpointDir($: $): Promise<string> {
   const dir = await configDirOf($)
-  if (!dir) throw new Error('No Claude configuration directory is available')
+  if (!dir) throw new Error('Claude 설정 폴더를 찾을 수 없습니다')
   return `${dir}/shared-session/rooms`
 }
 
@@ -3729,10 +3729,10 @@ async function readRoomCheckpoint($: $, key: string): Promise<RoomCheckpoint | u
     record = JSON.parse(text) as RoomCheckpointFile
   } catch {
     // JSON's syntax error may quote the damaged payload, which holds tokens.
-    throw new Error('A saved room checkpoint is invalid; it was left untouched')
+    throw new Error('저장된 방 기록이 올바르지 않아 그대로 두었습니다')
   }
   if (record?.version !== 1 || (record.value !== null && !isRoomCheckpoint(record.value)))
-    throw new Error('A saved room checkpoint is invalid; it was left untouched')
+    throw new Error('저장된 방 기록이 올바르지 않아 그대로 두었습니다')
   return record.value ?? undefined
 }
 
@@ -3748,12 +3748,12 @@ async function writeRoomCheckpoint($: $, key: string, value: RoomCheckpoint) {
     $,
     `umask 077\nset -e\nmkdir -p ${sq(dir)}\nchmod 700 ${sq(dir)}\ntmp=${sq(tmp)}\ntrap 'rm -f "$tmp"' 0\ncat > ${sq(tmp)} <<'${tag}'\n${body}\n${tag}\nchmod 600 ${sq(tmp)}\nmv ${sq(tmp)} ${sq(path)}\n`,
   )
-  if (result.code !== 0) throw new Error('Could not write the private saved room checkpoint')
+  if (result.code !== 0) throw new Error('저장된 방 기록 파일을 쓰지 못했습니다')
 }
 
 async function deleteRoomCheckpoint($: $, key: string) {
   const path = `${await roomCheckpointDir($)}/${encodeURIComponent(key)}.json`
-  if ((await sh($, `rm -f -- ${sq(path)}\n`)).code !== 0) throw new Error('Could not delete the saved room checkpoint')
+  if ((await sh($, `rm -f -- ${sq(path)}\n`)).code !== 0) throw new Error('저장된 방 기록을 지우지 못했습니다')
 }
 
 async function roomCheckpointKeys($: $): Promise<string[]> {
@@ -3995,7 +3995,7 @@ async function notMade($: $, back: Reclaim | null, error: unknown): Promise<neve
     const guest = back.saved.room.seat !== 'host'
     await writeRoomCheckpoint($, back.key, back.saved).catch(e =>
       $.ui.log(
-        `${guest ? "Couldn't save the joined session for reopening" : "Couldn't save the shared session for reopening"}: ${String((e as Error)?.message ?? e)}`,
+        `${guest ? "참여한 세션을 다시 열 수 있게 저장하지 못했습니다" : "공유한 세션을 다시 열 수 있게 저장하지 못했습니다"}: ${String((e as Error)?.message ?? e)}`,
       ),
     )
   }
@@ -4039,7 +4039,7 @@ async function settleReclaim($: $, back: Reclaim, forGood: boolean) {
   if (!forGood) {
     await writeRoomCheckpoint($, back.key, saved).catch(error =>
       $.ui.log(
-        `${guest ? "Couldn't save the joined session for reopening" : "Couldn't save the shared session for reopening"}: ${String((error as Error)?.message ?? error)}`,
+        `${guest ? "참여한 세션을 다시 열 수 있게 저장하지 못했습니다" : "공유한 세션을 다시 열 수 있게 저장하지 못했습니다"}: ${String((error as Error)?.message ?? error)}`,
       ),
     )
   } else {
@@ -4065,7 +4065,7 @@ async function resumeJoined($: $) {
     const current = () => reclaiming === back
     // Over while this was closed: only now does the sidebar row go back, and
     // the room's preview window profile goes.
-    const over = async (said = `${saved.room.host}'s session ended while this one was closed.`) => {
+    const over = async (said = `이 세션이 닫혀 있는 동안 ${saved.room.host}님의 세션이 끝났습니다.`) => {
       if (!current()) return
       reclaiming = null
       await update($, sidebarA, () => saved.sidebar ?? null)
@@ -4090,7 +4090,7 @@ async function resumeJoined($: $) {
     } catch (error) {
       // Its person left it from elsewhere meanwhile (the Team panel's Leave): said as such.
       if (error instanceof ApiError && error.status === 410 && error.data.left === true)
-        return void (await over(`You left ${saved.room.host}'s session from the Team panel while this one was closed.`))
+        return void (await over(`이 세션이 닫혀 있는 동안 팀 패널에서 ${saved.room.host}님의 세션을 나갔습니다.`))
       if (error instanceof ApiError && (error.status === 404 || error.status === 410)) return void (await over())
       if (error instanceof ApiError && error.status === 401) {
         // Given up meanwhile (a room made or joined here, the session's end):
@@ -4186,7 +4186,7 @@ async function resumeJoined($: $) {
     )
     for (const exchange of caught) laterRides.push({ text: exchange.prompt, ride: { kind: 'static', rows: exchange.rows } })
     startFeed($)
-    $.ui.log(caught.length ? `Back in ${room.host}'s session. What you missed follows.` : `Back in ${room.host}'s session.`)
+    $.ui.log(caught.length ? `${room.host}님의 세션으로 돌아왔습니다. 놓친 내용이 이어서 나옵니다.` : `${room.host}님의 세션으로 돌아왔습니다.`)
     if (caught.length || running) scheduleRides($)
   } finally {
     if (reclaiming === back) reclaiming = null
@@ -4226,7 +4226,7 @@ async function resumeHosting($: $) {
       page = await eventsSince($, saved.room, saved.room.seq)
     } catch (error) {
       if (isGone(error)) {
-        if (current()) $.ui.log('The session you shared ended while this one was closed.')
+        if (current()) $.ui.log('이 세션이 닫혀 있는 동안 공유하던 세션이 끝났습니다.')
         return
       }
       // Unreachable for now: share on, and the feed keeps trying.
@@ -4234,7 +4234,7 @@ async function resumeHosting($: $) {
     // The session ended meanwhile (its place saved again, or its room
     // ended), or the room was given up for another: nothing more of it here.
     if (!current()) return
-    if (page?.ended) return void $.ui.log('The session you shared ended while this one was closed.')
+    if (page?.ended) return void $.ui.log('이 세션이 닫혀 있는 동안 공유하던 세션이 끝났습니다.')
     const room: ShareRoom = { ...saved.room, seq: page?.seq ?? saved.room.seq }
     const shares = sharesSaved(saved)
     await update($, roomA, v => (reclaiming === back ? room : v))
@@ -4280,7 +4280,7 @@ async function resumeHosting($: $) {
           send($, 'declined', {
             pid: typeof event.body.pid === 'string' ? event.body.pid : '',
             who: event.from.name,
-            reason: `${room.host}'s Claude Code was closed when you sent this, so it didn't run. Send it again.`,
+            reason: `${room.host}님의 Claude Code가 닫혀 있을 때 보내서 실행되지 않았습니다. 다시 보내 주세요.`,
           })
           continue
         }
@@ -4290,7 +4290,7 @@ async function resumeHosting($: $) {
     }
     if (!s.live) return
     startFeed($)
-    $.ui.log(`Still sharing this session: ${room.url}`)
+    $.ui.log(`이 세션을 계속 공유하고 있습니다: ${room.url}`)
   } finally {
     if (reclaiming === back) reclaiming = null
     tookBack($, back)
@@ -4337,7 +4337,7 @@ async function setPolicy($: $, change: Partial<SharePolicy>) {
 // session, which watch-only keeps to teammates.
 async function acceptPrompt($: $, who: string, seat: string, text: string, pid: string, attachments: ShareFileMeta[] = [], approver = false) {
   if ((await read($, policyA)).prompts === 'watch' && !(approver && (await isRunner($)))) {
-    send($, 'declined', { pid, who, reason: 'This session is watch-only right now. Chat in the Room panel.' })
+    send($, 'declined', { pid, who, reason: '지금은 보기만 할 수 있는 세션입니다. 방 패널에서 채팅하세요.' })
     return
   }
   // What they attached, saved in the project, each named in the prompt with
@@ -4435,9 +4435,9 @@ async function peerMissing($: $): Promise<string | null> {
   const engine = /claude-code_(\d+)-(\d+)-(\d+)/.exec((await $.env.get('AI_AGENT')) ?? '')
   const older = engine ? Number(engine[1]) * 1e6 + Number(engine[2]) * 1e3 + Number(engine[3]) < 2_001_304 : false
   if (older || !(await $.env.get('CLAUDE_CODE_MESSAGING_SOCKET')))
-    return "its Claude Code can't pass messages between sessions (that needs Claude Code 2.1.304 or later)"
+    return "이 컴퓨터의 Claude Code는 세션 사이에 메시지를 전달하지 못합니다(Claude Code 2.1.304 이상 필요)"
   peerPlatform ??= sh($, 'uname -s\n').then(({ out }) => /^(Darwin|Linux)\s*$/.test(out))
-  if (!(await peerPlatform)) return 'messages between sessions are passed on only on macOS and Linux'
+  if (!(await peerPlatform)) return '세션 사이 메시지는 macOS와 Linux에서만 전달됩니다'
   return null
 }
 
@@ -4631,11 +4631,11 @@ async function restoreMailboxes($: $) {
 // Why a message to the host's session didn't reach their Claude, in words for
 // the session that wrote it (and its turn on the joined session).
 function peerRefusal(host: string, result: string | undefined): string {
-  if (result === 'offline') return `${host} isn't connected right now, so this didn't reach their Claude. Send it again later.`
-  if (result === 'gone') return "The shared session has ended, so this didn't reach anyone's Claude."
-  if (result === 'busy') return `Too many messages went to ${host}'s session this minute, so this one didn't. Send it again in a minute.`
-  if (result === 'large') return `This was too large to send to ${host}'s session, so it didn't reach their Claude.`
-  return `Couldn't reach the share server, so this didn't reach ${host}'s Claude.`
+  if (result === 'offline') return `${host}님이 지금 연결되어 있지 않아 Claude에게 전달되지 않았습니다. 나중에 다시 보내 주세요.`
+  if (result === 'gone') return "공유 세션이 끝나서 누구의 Claude에게도 전달되지 않았습니다."
+  if (result === 'busy') return `이번 1분 동안 ${host}님의 세션에 메시지가 너무 많이 가서 이 메시지는 보내지 못했습니다. 1분 뒤에 다시 보내 주세요.`
+  if (result === 'large') return `메시지가 너무 커서 ${host}님의 세션에 보내지 못했고, Claude에게 전달되지 않았습니다.`
+  return `공유 서버에 연결하지 못해 ${host}님의 Claude에게 전달되지 않았습니다.`
 }
 
 // To the room for the other side (POST peer): what came of it, in a word. A
@@ -4687,9 +4687,9 @@ async function hostPeer($: $, room: ShareRoom, value: Record<string, unknown>) {
   const who = typeof value.who === 'string' && value.who ? tidySender(value.who) : 'A teammate'
   const decline = (reason: string) => send($, 'declined', { pid, who, reason })
   const s = scope
-  if ((await read($, policyA)).prompts === 'watch') return decline(`${room.host} has this shared session on watch-only, so this didn't reach their Claude.`)
+  if ((await read($, policyA)).prompts === 'watch') return decline(`${room.host}님이 이 공유 세션을 보기만으로 두어서 Claude에게 전달되지 않았습니다.`)
   const missing = await peerMissing($)
-  if (missing) return decline(`${room.host}'s computer can't take this: ${missing}.`)
+  if (missing) return decline(`${room.host}님의 컴퓨터가 이 메시지를 받을 수 없습니다: ${missing}.`)
   const route: SharePeerRoute = {
     kind: 'host',
     seat,
@@ -4704,10 +4704,10 @@ async function hostPeer($: $, room: ShareRoom, value: Record<string, unknown>) {
   if ('error' in run) {
     return decline(
       run.error === 'UNSUPPORTED'
-        ? `${room.host}'s computer can't take messages from other sessions, so this didn't reach their Claude.`
+        ? `${room.host}님의 컴퓨터는 다른 세션의 메시지를 받을 수 없어 Claude에게 전달되지 않았습니다.`
         : run.error === 'NODE'
-          ? `${room.host}'s computer couldn't take this in (it needs Node 22.18 or later), so this didn't reach their Claude.`
-          : `${room.host}'s computer couldn't take this in, so it didn't reach their Claude.`,
+          ? `${room.host}님의 컴퓨터가 이 메시지를 받지 못해(Node 22.18 이상 필요) Claude에게 전달되지 않았습니다.`
+          : `${room.host}님의 컴퓨터가 이 메시지를 받지 못해 Claude에게 전달되지 않았습니다.`,
     )
   }
   const hops = Array.isArray(chain) ? chain.filter((t): t is string => typeof t === 'string' && HOP_TOKEN.test(t)).slice(-32) : []
@@ -4727,7 +4727,7 @@ async function hostPeer($: $, room: ShareRoom, value: Record<string, unknown>) {
   })
   if (status === 200) return
   relaysHere.splice(relaysHere.indexOf(relay), 1)
-  decline(`${room.host}'s Claude Code didn't take this, so it didn't reach their Claude.`)
+  decline(`${room.host}님의 Claude Code가 이 메시지를 받지 않아 Claude에게 전달되지 않았습니다.`)
 }
 
 // Host: what became of a message this session's Claude wrote to a mailbox,
@@ -4871,7 +4871,7 @@ async function notTaken($: $, prompt: ShareGuestPrompt) {
   send($, 'declined', {
     pid: prompt.pid,
     who: prompt.who,
-    reason: `${room?.host ?? 'The host'}'s Claude Code didn't take this prompt, so it didn't run. Send it again.`,
+    reason: `${room?.host ?? '방장'}님의 Claude Code가 이 요청을 받지 않아 실행되지 않았습니다. 다시 보내 주세요.`,
   })
   nextGuestPromptSoon($)
 }
@@ -4910,7 +4910,7 @@ async function releaseHeld($: $, media: Media[]) {
   const missing = Math.max(held.names.length, media.length) - attachments.length
   if (missing > 0)
     $.ui.log(
-      `${missing === 1 ? 'An attachment' : `${missing} attachments`} didn't go with this message (over 8 MB, unreadable, or the room is full); the words did.`,
+      `${missing === 1 ? '첨부 파일 1개가' : `첨부 파일 ${missing}개가`} 이 메시지와 함께 가지 못했습니다(8MB 초과, 읽을 수 없음, 또는 방이 가득 참). 글은 보냈습니다.`,
     )
   send($, 'prompt', { text: held.text, pid: held.pid, ...(attachments.length ? { attachments } : {}) })
 }
@@ -4920,7 +4920,7 @@ async function stopTurn($: $, who: string) {
   if (!working) return
   try {
     await $.turn.abort({ turnId: working.turnId })
-    $.ui.toast(`${who} stopped the turn`)
+    $.ui.toast(`${who}님이 답을 멈췄어요`)
   } catch {}
 }
 
@@ -4933,11 +4933,11 @@ function approvalPreview(tool: string, input: unknown, cwd: string, lines = 40):
   const fence = (lang: string, body: string) => {
     const all = body.split('\n'),
       more = all.length - lines
-    return `\`\`\`${lang}\n${all.slice(0, lines).join('\n')}\n\`\`\`${more > 0 ? `\n\n… ${more} more line${more === 1 ? '' : 's'}` : ''}`
+    return `\`\`\`${lang}\n${all.slice(0, lines).join('\n')}\n\`\`\`${more > 0 ? `\n\n… ${more}줄 더${more === 1 ? '' : ''}` : ''}`
   }
   switch (tool) {
     case 'Bash':
-      return `${fence('bash', str(i.command))}\n\nin \`${cwd}\``
+      return `${fence('bash', str(i.command))}\n\n위치: \`${cwd}\``
     case 'Edit': {
       const minus = str(i.old_string)
         .split('\n')
@@ -4948,9 +4948,9 @@ function approvalPreview(tool: string, input: unknown, cwd: string, lines = 40):
       return `\`${rel(i.file_path)}\`\n\n${fence('diff', [...minus, ...plus].join('\n'))}`
     }
     case 'Write':
-      return `New file \`${rel(i.file_path)}\`\n\n${fence('', str(i.content))}`
+      return `새 파일 \`${rel(i.file_path)}\`\n\n${fence('', str(i.content))}`
     case 'WebFetch':
-      return `Fetch ${str(i.url)}`
+      return `${str(i.url)} 가져오기`
     default:
       return fence('json', JSON.stringify(input ?? {}, null, 2))
   }
@@ -4973,7 +4973,7 @@ function callWhat(tool: string, input: unknown, cwd: string): string {
 function callExtent(tool: string, input: unknown): string {
   const i = (input ?? {}) as Record<string, unknown>
   const count = (v: unknown) => (typeof v === 'string' && v.replace(/\n+$/, '') ? v.replace(/\n+$/, '').split('\n').length : 0)
-  const lines = (n: number) => `${n} line${n === 1 ? '' : 's'}`
+  const lines = (n: number) => `${n}줄`
   if (tool === 'Bash') return count(i.command) > 1 ? `+${lines(count(i.command) - 1)}` : ''
   if (tool === 'Write') return lines(count(i.content))
   if (tool === 'Edit') return `${count(i.old_string)} → ${lines(count(i.new_string))}`
@@ -5039,12 +5039,12 @@ async function takeCloudAsk($: $, event: ServerEvent, live: boolean) {
       ...(shared.length
         ? [
             link
-              ? `The cloud host is sharing ${portList(shared)} with the room through its link.`
-              : `Teammates can reach the cloud host's ${portList(shared)} now.`,
+              ? `클라우드 세션이 ${portList(shared)} 포트를 링크로 방에 공유하고 있어요.`
+              : `이제 손님이 클라우드 세션의 ${portList(shared)} 포트에 들어올 수 있어요.`,
           ]
         : []),
       ...(failed.length
-        ? [link ? `The cloud host couldn't share ${portList(failed)} with the room.` : `The cloud host couldn't forward ${portList(failed)} to teammates.`]
+        ? [link ? `클라우드 세션이 ${portList(failed)} 포트를 방에 공유하지 못했어요.` : `클라우드 세션이 ${portList(failed)} 포트를 손님에게 전달하지 못했어요.`]
         : []),
     ]
     if (live && said.length) $.ui.toast(said.join(' '))
@@ -5071,7 +5071,7 @@ async function takeCloudAsk($: $, event: ServerEvent, live: boolean) {
       }
     : {
         id: b.id,
-        who: typeof b.who === 'string' ? b.who : 'Someone',
+        who: typeof b.who === 'string' ? b.who : '익명',
         ...(typeof b.seat === 'string' && b.seat ? { seat: b.seat.slice(0, 64) } : {}),
         what: String(b.what).slice(0, 200),
         ...(typeof b.extent === 'string' && b.extent ? { extent: b.extent.slice(0, 80) } : {}),
@@ -5085,11 +5085,11 @@ async function takeCloudAsk($: $, event: ServerEvent, live: boolean) {
   $.ui.toast(
     local
       ? ask.what.endsWith('?')
-        ? `${ask.what} Answer above the prompt`
-        : `${ask.what}: answer above the prompt`
-      : `${ask.who} wants Claude to run ${ask.what.slice(0, 80)}: answer above the prompt`,
+        ? `${ask.what} 입력창 위에서 답해 주세요`
+        : `${ask.what}: 입력창 위에서 답해 주세요`
+      : `${ask.who}님이 Claude에게 ${ask.what.slice(0, 80)} 실행을 요청했어요: 입력창 위에서 답해 주세요`,
   )
-  void cue($, 'mention', local ? ask.what.slice(0, 80) : `${ask.who} wants Claude to run ${ask.what.slice(0, 60)}`)
+  void cue($, 'mention', local ? ask.what.slice(0, 80) : `${ask.who}님이 Claude에게 ${ask.what.slice(0, 60)} 실행을 요청했어요`)
   nudgeSidebar($)
 }
 
@@ -5108,25 +5108,25 @@ function localAskOf(b: Record<string, unknown>): ShareHostAsk | null {
           .map(r => ({ port: Number(r.port), label: cleanLabel(r.label, 40) }))
   if (kind === 'related' && !related.length) return null
   const label = cleanLabel(b.label, 40)
-  return { id: '', kind, port: Number(b.port), ...(label ? { label } : {}), ...(kind === 'need' ? { who: cleanLabel(b.who, 40) || 'A guest' } : {}), related }
+  return { id: '', kind, port: Number(b.port), ...(label ? { label } : {}), ...(kind === 'need' ? { who: cleanLabel(b.who, 40) || '익명' } : {}), related }
 }
 
 // What the approver's yes does, said under the question in the Room.
 function cloudAskMeans(ask: ShareCloudAsk): string {
-  if (ask.kind === 'show') return 'Its Claude gave out this page. Shared, everyone in the room can open it through its link.'
-  if (ask.kind === 'mention') return "Allowed, teammates open it at that address on their own computer, forwarded from the cloud host's."
-  if (ask.kind === 'related') return 'Its page uses this beside it. Shared, it reaches teammates at the same address, for that page.'
-  return "Their preview window reached this port of the cloud host's. Shared, it reaches them at the same address."
+  if (ask.kind === 'show') return '클라우드 세션의 Claude가 띄운 페이지입니다. 공유하면 방에 있는 모든 사람이 링크로 열 수 있습니다.'
+  if (ask.kind === 'mention') return "허용하면 손님이 자기 컴퓨터에서 같은 주소로 열 수 있습니다. 클라우드 세션의 포트를 전달합니다."
+  if (ask.kind === 'related') return '이 페이지가 함께 쓰는 서비스입니다. 공유하면 그 페이지를 위해 손님에게도 같은 주소로 연결됩니다.'
+  return "손님의 미리보기 창이 클라우드 세션의 이 포트에 접속했습니다. 공유하면 손님에게 같은 주소로 연결됩니다."
 }
 
 // The approver's words for it: the host's row's, of the cloud host's
 // localhost, every port a yes shares before what may be cut.
 function cloudHostWords(ask: ShareHostAsk): string {
-  const theirs = "the cloud host's "
+  const theirs = "클라우드 세션의 "
   if (ask.kind === 'related') return hostAskWords(ask).replace(/localhost:(\d+)$/, `${theirs}localhost:$1`)
-  if (ask.kind === 'mention') return `Let guests open ${theirs}localhost:${ask.port} at the same address?`
-  if (ask.kind === 'show') return `Share ${theirs}${serviceName({ port: ask.port, label: ask.label })} with the room?`
-  return `${ask.who ?? 'A guest'}'s preview needs ${theirs}${serviceName({ port: ask.port, label: ask.label })}`
+  if (ask.kind === 'mention') return `손님도 ${theirs}localhost:${ask.port}에 같은 주소로 들어오게 할까요?`
+  if (ask.kind === 'show') return `방에 ${theirs}${serviceName({ port: ask.port, label: ask.label })} 공유할까요?`
+  return `${ask.who ? `${ask.who}님의` : '손님의'} 미리보기가 ${theirs}${serviceName({ port: ask.port, label: ask.label })}에 접속하려고 해요`
 }
 
 // Approver: an answer for the cloud host. Always allow answers that person's
@@ -5155,15 +5155,15 @@ async function noteCloud($: $, room: ShareRoom, mode: ShareMode, event: ServerEv
     b.state === 'starting'
       ? mine
         ? ''
-        : `${by} moved this session to the cloud: it keeps running when their computer sleeps.`
+        : `${by}님이 이 세션을 클라우드로 옮겼습니다. 컴퓨터가 잠자기에 들어가도 세션은 계속 돌아갑니다.`
       : b.state === 'running'
         ? mine
-          ? 'Your session runs in the cloud now. Teammates’ calls come to you to approve, here and in the Room.'
+          ? '이제 세션이 클라우드에서 돌아갑니다. 손님이 요청한 도구 실행은 여기와 방에서 허용할 수 있습니다.'
           : ''
         : b.state === 'stopped'
-          ? `The cloud host stopped${b.why === 'expired' ? ' after its week' : ''}. ${mine ? 'Press Bring home in the Room to take the session back.' : `${room.host} brings it home to go on.`}`
+          ? `클라우드 세션이 멈췄습니다${b.why === 'expired' ? '(일주일이 지남)' : ''}. ${mine ? '방에서 「다시 가져오기」를 눌러 세션을 되찾으세요.' : `${room.host}님이 다시 가져오면 이어집니다.`}`
           : b.state === 'home' && !mine
-            ? `${by} brought this session home.`
+            ? `${by}님이 이 세션을 다시 가져왔습니다.`
             : ''
   if (said) $.ui.log(said)
 }
@@ -5174,7 +5174,7 @@ async function noteCloud($: $, room: ShareRoom, mode: ShareMode, event: ServerEv
 const CLOUD_TOKEN = /^sk-ant-oat01-[A-Za-z0-9_-]{20,400}$/
 async function cloudTokenPath($: $): Promise<string> {
   const dir = await configDirOf($)
-  if (!dir) throw new Error('No Claude configuration folder')
+  if (!dir) throw new Error('Claude 설정 폴더가 없어요')
   return `${dir}/shared-session/cloud-token`
 }
 async function savedCloudToken($: $): Promise<string | null> {
@@ -5192,7 +5192,7 @@ async function takeCopiedToken($: $): Promise<boolean> {
   const token = pasted.out.trim()
   if (!CLOUD_TOKEN.test(token)) {
     await update($, cloudMoveA, () =>
-      cloudMove('token', "That isn't a token from claude setup-token (it starts sk-ant-oat01-). Copy the token it printed, then press again."),
+      cloudMove('token', "claude setup-token으로 만든 토큰이 아니에요(sk-ant-oat01-로 시작해요). claude setup-token이 출력한 토큰을 복사한 뒤 다시 눌러 주세요."),
     )
     return false
   }
@@ -5204,7 +5204,7 @@ async function takeCopiedToken($: $): Promise<boolean> {
     `umask 077\nset -e\nmkdir -p ${sq(path.slice(0, path.lastIndexOf('/')))}\ncat > ${sq(tmp)} <<'${tag}'\n${token}\n${tag}\nchmod 600 ${sq(tmp)}\nmv ${sq(tmp)} ${sq(path)}\n`,
   )
   if (saved.code !== 0) {
-    await update($, cloudMoveA, () => cloudMove('failed', "Couldn't keep the token on this computer."))
+    await update($, cloudMoveA, () => cloudMove('failed', "이 컴퓨터에 토큰을 저장하지 못했어요."))
     return false
   }
   // Not on the clipboard any longer than needed.
@@ -5244,7 +5244,7 @@ async function packSession($: $): Promise<{ path: string; dir: string; size: num
   )
   const dir = /dir=(\S+)/.exec(r.out)?.[1]
   const size = Number(/size=(\d+)/.exec(r.out)?.[1])
-  if (r.code !== 0 || !dir || !Number.isFinite(size)) throw new Error("Couldn't pack the project")
+  if (r.code !== 0 || !dir || !Number.isFinite(size)) throw new Error("프로젝트를 압축하지 못했어요")
   return { path: `${dir}/session.tgz`, dir, size }
 }
 
@@ -5260,7 +5260,7 @@ async function moveToCloud($: $) {
   try {
     packed = await packSession($)
     if (packed.size > CLOUD_BUNDLE_BYTES)
-      throw new Error(`This project is ${Math.round(packed.size / 1024 / 1024)} MB packed; a move takes up to ${CLOUD_BUNDLE_BYTES / 1024 / 1024} MB.`)
+      throw new Error(`압축한 프로젝트가 ${Math.round(packed.size / 1024 / 1024)} MB예요. 클라우드로 옮길 수 있는 크기는 최대 ${CLOUD_BUNDLE_BYTES / 1024 / 1024} MB예요.`)
     // What only this computer serves can't come along: its previews end first.
     for (const share of Object.values(await read($, sharesA))) await stopPreview($, share.pid)
     await update($, cloudMoveA, () => cloudMove('starting'))
@@ -5285,7 +5285,7 @@ async function moveToCloud($: $) {
     if (sent.out.trim() !== '200') {
       // Nothing to run on: the host comes straight back here.
       await api($, room.server, `/api/rooms/${room.id}/cloud/home`, { method: 'POST', token: moved.token, body: {} }).catch(() => {})
-      throw new Error("The packed session didn't reach the cloud host, so the session stays here.")
+      throw new Error("압축한 세션이 클라우드에 닿지 않아 세션은 여기 그대로 있어요.")
     }
     // On here as the approver: this session's place as a guest, taken up as
     // a reopened session takes its seat back.
@@ -5345,7 +5345,7 @@ async function bringHome($: $) {
     await resumeHosting($)
     await update($, cloudMoveA, () => null)
     if (home.changes) await applyCloudChanges($, { ...room, token: home.token }, home.changes)
-    else $.ui.log('Back home. The cloud host changed no files.')
+    else $.ui.log('다시 가져왔습니다. 클라우드 세션에서 바뀐 파일은 없습니다.')
   } catch (error) {
     await update($, cloudMoveA, () => cloudMove('failed', String((error as Error)?.message ?? error).slice(0, 300)))
   }
@@ -5371,10 +5371,10 @@ async function applyCloudChanges($: $, room: ShareRoom, changes: ShareFileMeta) 
     120_000,
   )
   const applied = /applied=(\d+)/.exec(r.out)?.[1]
-  if (applied) $.ui.log(`Back home, with the cloud host's changes to ${applied} file${applied === '1' ? '' : 's'} in your project (also kept in ${rel}).`)
+  if (applied) $.ui.log(`다시 가져왔습니다. 클라우드 세션이 바꾼 파일 ${applied}개를 프로젝트에 반영했습니다(${rel}에도 보관했습니다).`)
   else if (/kept/.test(r.out))
-    $.ui.log(`Back home. The cloud host's changes don't apply cleanly over your files, so they're kept in ${rel}: apply them with git apply --3way ${rel}`)
-  else $.ui.log("Back home. The cloud host's changes couldn't be downloaded; they're in the Room's files for a while.")
+    $.ui.log(`다시 가져왔습니다. 클라우드 세션의 변경이 내 파일에 깔끔하게 적용되지 않아 ${rel}에 보관했습니다. 적용 명령: git apply --3way ${rel}`)
+  else $.ui.log("다시 가져왔습니다. 클라우드 세션의 변경을 내려받지 못했습니다. 한동안 방의 파일에 남아 있습니다.")
 }
 
 // Two calls put to the host are one person's: one seat, or one account.
@@ -5536,10 +5536,10 @@ async function replaced($: $): Promise<boolean> {
 // to the host's session now, in words for that session (and for this one's
 // turn for it): null when it can.
 async function relayRefusal($: $, room: ShareRoom): Promise<string | null> {
-  if ((await read($, policyA)).prompts === 'watch') return `${room.host} has this shared session on watch-only, so this didn't reach their Claude.`
+  if ((await read($, policyA)).prompts === 'watch') return `${room.host}님이 이 공유 세션을 보기만으로 설정해 두어, 이 메시지는 Claude에 전달되지 않았습니다.`
   if ((await read($, peopleA)).some(p => p.role === 'host' && !p.online)) return peerRefusal(room.host, 'offline')
   const missing = await peerMissing($)
-  return missing ? `This computer can't pass this on: ${missing}.` : null
+  return missing ? `이 컴퓨터에서는 이 메시지를 전달할 수 없습니다: ${missing}.` : null
 }
 
 // The row Claude Code wrote this session's transcript for a message from
@@ -5627,7 +5627,7 @@ async function relayQueued($: $, room: ShareRoom, s: RoomScope, pid: string, sen
   })
   lastActivity = await $.clock.now()
   if (result === 'delivered') {
-    $.clock.after(RELAY_WAIT_MS, () => endRelay(pid, `Passed on to **${room.host}**'s session; their Claude hasn't taken it up yet.`))
+    $.clock.after(RELAY_WAIT_MS, () => endRelay(pid, `**${room.host}**님의 세션에 전달했습니다. 아직 Claude가 받아 처리하지 않았습니다.`))
     return
   }
   const words = peerRefusal(room.host, result)
@@ -5684,21 +5684,21 @@ function tellPeer($: $, to: string, text: string) {
 // host's Claude Code said it: only for the id that session gave it, and a
 // release only after a hold.
 const DROP_WORDS: Record<string, string> = {
-  'rate-limited': 'too many messages too fast',
-  duplicate: 'it repeated the one before',
-  'hop-loop': 'a relay loop between sessions was cut',
-  'hop-runaway': 'a relay loop between sessions was cut',
-  'queue-full': 'too many messages were waiting there',
+  'rate-limited': '짧은 시간에 메시지가 너무 많음',
+  duplicate: '바로 앞 메시지와 같음',
+  'hop-loop': '세션 사이를 맴도는 전달을 끊음',
+  'hop-runaway': '세션 사이를 맴도는 전달을 끊음',
+  'queue-full': '그곳에 기다리는 메시지가 너무 많음',
 }
 async function guestReceipt($: $, room: ShareRoom, value: Record<string, unknown>) {
   const receipt = peerReceiptOf(value, 'id')
   if (!receipt) return
   const relay = (await update($, peerRelaysA, list => list)).find(r => r.id === receipt.of && r.handle === receipt.handle)
   if (!relay) return
-  if (receipt.status === 'held') endRelay(relay.pid, `**${room.host}**'s Claude Code is holding this until ${room.host} lets it in.`)
+  if (receipt.status === 'held') endRelay(relay.pid, `**${room.host}**님의 Claude Code가 ${room.host}님이 받아들일 때까지 이 메시지를 보류하고 있습니다.`)
   else if (receipt.status === 'dropped')
-    endRelay(relay.pid, `**${room.host}**'s Claude Code dropped this${receipt.reason ? ` (${DROP_WORDS[receipt.reason]})` : ''}.`)
-  else if (receipt.status === 'refused') endRelay(relay.pid, `**${room.host}**'s Claude Code isn't taking messages from other sessions.`)
+    endRelay(relay.pid, `**${room.host}**님의 Claude Code가 이 메시지를 버렸습니다${receipt.reason ? ` (${DROP_WORDS[receipt.reason]})` : ''}.`)
+  else if (receipt.status === 'refused') endRelay(relay.pid, `**${room.host}**님의 Claude Code는 다른 세션의 메시지를 받지 않습니다.`)
   if (!relay.native || !relay.to.startsWith('uds:') || (receipt.status === 'delivered' && !relay.held)) return
   if (receipt.status === 'held') await update($, peerRelaysA, list => list.map(r => (r.id === relay.id ? { ...r, held: true as const } : r)))
   const own = await $.env.get('CLAUDE_CODE_MESSAGING_SOCKET')
@@ -6087,7 +6087,7 @@ async function withImages($: $, room: ShareRoom, text: string, images: RoomImage
     const data = await downloadImage($, room, image)
     if (data) blocks.push({ type: 'image', source: { type: 'base64', media_type: image.type, data } })
   }
-  return blocks.length ? blocks : text || "(the picture didn't come through)"
+  return blocks.length ? blocks : text || "(그림이 오지 않았습니다)"
 }
 
 // Host: text (a widget too big for an event) to the room, as a file.
@@ -6293,7 +6293,7 @@ async function ensurePreview($: $, room: ShareRoom, port: number, title: string,
     // Still being told: the room would answer with the preview that Stop
     // then ends, whenever it arrives, so nothing is shared yet.
     if (s.endingPorts.has(port)) {
-      if (sameRoom(room, s)) $.ui.log(`Couldn't share localhost:${port} yet: the room is still being told it stopped. Try again in a moment.`)
+      if (sameRoom(room, s)) $.ui.log(`localhost:${port} 포트는 아직 공유할 수 없습니다: 방에 공유 종료를 알리는 중입니다. 잠시 뒤 다시 해 주세요.`)
       return null
     }
     const known = (await read($, sharesA))[String(port)]
@@ -6311,7 +6311,7 @@ async function ensurePreview($: $, room: ShareRoom, port: number, title: string,
     const share = await writeShare($, s, port, old => shareOver(old, pid, said, made))
     return share && sameRoom(room, s) ? share : null
   } catch (error) {
-    if (sameRoom(room, s)) $.ui.log(`Couldn't share localhost:${port}: ${String((error as Error)?.message ?? error)}`)
+    if (sameRoom(room, s)) $.ui.log(`localhost:${port} 포트를 공유하지 못했습니다: ${String((error as Error)?.message ?? error)}`)
     return null
   } finally {
     done()
@@ -6385,7 +6385,7 @@ async function allowForwarding($: $, item: ShareShown) {
     { offerRelated: 8_000 },
   )
   if (hostHere(room))
-    $.ui.toast(forwarded && 'pid' in forwarded ? forwardedSaid([port]) : (forwarded?.refused ?? `Couldn't allow forwarding localhost:${port}`))
+    $.ui.toast(forwarded && 'pid' in forwarded ? forwardedSaid([port]) : (forwarded?.refused ?? `localhost:${port} 포트 전달을 허용하지 못했어요`))
 }
 
 async function stopPreview($: $, pid: string) {
@@ -6404,7 +6404,7 @@ async function stopPreview($: $, pid: string) {
   if (!sameRoom(room, s) || (await endPreview($, room, s, pid, port))) return
   if (sameRoom(room, s))
     $.ui.toast(
-      `Stopped sharing ${validPort(port) ? `localhost:${port}` : 'that preview'}. The server couldn't be told yet, so guests may still see it listed, but nothing reaches it. The server is told again when this session reconnects, or when you press Stop again.`,
+      `${validPort(port) ? `localhost:${port}` : '그 미리보기'} 공유를 끝냈어요. 아직 서버에 알리지 못해 손님 목록에는 보일 수 있지만, 아무것도 연결되지 않아요. 이 세션이 다시 연결되거나 「공유 끝내기」를 다시 누르면 서버에 다시 알려요.`,
     )
 }
 
@@ -6576,7 +6576,7 @@ async function offerShow($: $, room: ShareRoom, page: LocalPage, opts: { title?:
       // Its own yes: the same-address question after it is a question of its own.
       await rememberHost($, room, m => ({ ...m, askedAt: Object.fromEntries(Object.entries(m.askedAt).filter(([p]) => Number(p) !== port)) }))
       shared = await sharePublic($, room, page, opts)
-      if (shared) $.ui.toast(`Sharing localhost:${port} with the room (stop it in the Room)`)
+      if (shared) $.ui.toast(`localhost:${port} 포트를 방에 공유하고 있어요(방에서 끝낼 수 있어요)`)
       return { shared: [], refused: [] }
     })
   } finally {
@@ -6725,7 +6725,7 @@ async function pageEvent($: $, room: ShareRoom, input: Record<string, unknown>, 
   }
   return beside.length
     ? { kind: 'page', files: [{ ...page, path: baseName(str(input.file_path)) }, ...beside] }
-    : { kind: 'send', files: [page], display: 'render', caption: 'A page Claude published' }
+    : { kind: 'send', files: [page], display: 'render', caption: 'Claude가 게시한 페이지' }
 }
 
 // An Artifact's id, from its link (claude.ai/artifact/<id>, claude.ai/code/artifact/<id>).
@@ -6782,12 +6782,12 @@ async function replayOf($: $, room: ShareRoom, event: ServerEvent): Promise<Repl
   const cwd = await $.session.cwd()
   const rel = (p: string) => (p.startsWith(`${cwd}/`) ? p.slice(cwd.length + 1) : p)
   const savedNote = paths.length
-    ? `saved to ${(shown.files ?? []).some(f => f.path) ? `\`${rel(paths[0]!)}\`, with its files` : paths.map(p => `\`${rel(p)}\``).join(', ')}`
+    ? `저장 위치: ${(shown.files ?? []).some(f => f.path) ? `\`${rel(paths[0]!)}\`(딸린 파일 포함)` : paths.map(p => `\`${rel(p)}\``).join(', ')}`
     : ''
-  const label = `◧ **${host}'s Claude showed** ${shown.name}`
+  const label = `◧ **${host}님의 Claude가 보여 준 것** ${shown.name}`
   switch (shown.kind) {
     case 'send':
-      if (!paths.length) return { label, note: "the file didn't come through" }
+      if (!paths.length) return { label, note: "파일이 오지 않았습니다" }
       if (!(await hasTool($, 'SendUserFile'))) return { label, note: savedNote }
       return {
         label,
@@ -6805,8 +6805,8 @@ async function replayOf($: $, room: ShareRoom, event: ServerEvent): Promise<Repl
       let code = typeof body.code === 'string' ? body.code : ''
       if (!code && paths[0]) code = (await sh($, `cat ${sq(paths[0])}\n`)).out
       const tool = code ? await widgetTool($) : null
-      if (!tool) return { label, note: code ? 'this Claude Code has no widget viewer' : "the widget didn't come through" }
-      const loading = Array.isArray(body.loading) && body.loading.length ? body.loading : [`Drawing what ${host} saw`]
+      if (!tool) return { label, note: code ? '이 Claude Code에는 위젯 뷰어가 없습니다' : "위젯이 오지 않았습니다" }
+      const loading = Array.isArray(body.loading) && body.loading.length ? body.loading : [`${host}님이 본 화면을 그리는 중`]
       return {
         label,
         call: {
@@ -6816,14 +6816,14 @@ async function replayOf($: $, room: ShareRoom, event: ServerEvent): Promise<Repl
       }
     }
     case 'file':
-      if (!paths[0]) return { label, note: "the file didn't come through" }
+      if (!paths[0]) return { label, note: "파일이 오지 않았습니다" }
       if (!(await hasTool($, 'mcp__ccd_view__show_pane'))) return { label, note: savedNote }
       return {
         label,
         call: { name: 'mcp__ccd_view__show_pane', input: { pane: 'file', path: paths[0], ...(typeof body.line === 'number' ? { line: body.line } : {}) } },
       }
     case 'page':
-      if (!paths[0]) return { label, note: "the page didn't come through" }
+      if (!paths[0]) return { label, note: "페이지가 오지 않았습니다" }
       if (!(await hasTool($, 'mcp__Claude_Browser__preview_start'))) return { label, note: savedNote }
       return { label, call: { name: 'mcp__Claude_Browser__preview_start', input: { url: `file://${paths[0]}` } } }
     case 'preview': {
@@ -6831,7 +6831,7 @@ async function replayOf($: $, room: ShareRoom, event: ServerEvent): Promise<Repl
       // Shared for another page's sake: that page reaches it when it opens.
       if (shown.dependency !== undefined && validPort(shown.port)) {
         const title = typeof body.title === 'string' && body.title ? body.title : dependencyTitle(shown.port)
-        return { label: `◧ **${host} shares** ${title} ${dependencyFor(shown.dependency)}; the page reaches it when you open it` }
+        return { label: `◧ **${host}님이 공유한 것** ${title} (${dependencyFor(shown.dependency)}), 그 페이지를 열면 함께 연결됩니다` }
       }
       // Forwarded only when the guest says so: Open preview above the
       // prompt, or Open in the Room, never a replay.
@@ -6839,14 +6839,14 @@ async function replayOf($: $, room: ShareRoom, event: ServerEvent): Promise<Repl
         if (validPort(shown.port))
           return {
             label,
-            note: `press **Open preview** above the prompt (or **Open** in the Room) to open it at ${previewUrl(shown.host, shown.port, shown.path, shown.scheme)}`,
+            note: `입력창 위 **미리보기 열기**(또는 방의 **열기**)를 누르면 ${previewUrl(shown.host, shown.port, shown.path, shown.scheme)}에서 열립니다`,
           }
-        return { label, note: 'press **Open** in the Room to open it' }
+        return { label, note: '방에서 **열기**를 누르면 열립니다' }
       }
       const url = await previewTicket($, room, shown.pid, shown.path)
-      if (!url) return { label, note: 'the preview could not be opened' }
+      if (!url) return { label, note: '미리보기를 열지 못했습니다' }
       if (!(await hasTool($, 'mcp__Claude_Browser__preview_start')))
-        return { label, note: `open it in a browser within 10 minutes (the link opens in one browser): ${url}` }
+        return { label, note: `10분 안에 브라우저에서 열어 주세요(링크는 브라우저 한 곳에서만 열립니다): ${url}` }
       return { label, call: { name: 'mcp__Claude_Browser__preview_start', input: { url } } }
     }
     case 'link':
@@ -6860,13 +6860,13 @@ async function replayOf($: $, room: ShareRoom, event: ServerEvent): Promise<Repl
 // a preview, where the file is for anything else, and the Room's Open.
 async function refusedNote($: $, room: ShareRoom, event: ServerEvent, reason: string): Promise<string> {
   const shown = shownOf(event)
-  const why = /auto mode/i.test(reason) ? 'auto mode only opens what you asked for' : 'it was not allowed'
+  const why = /auto mode/i.test(reason) ? '자동 모드에서는 요청한 것만 엽니다' : '허용되지 않았습니다'
   if (shown?.kind === 'preview' && shown.pid && !shown.tcp) {
     const url = await previewTicket($, room, shown.pid, shown.path)
     if (url)
-      return `\n\n> This session didn't open it in the browser pane (${why}). [Open the preview](${url}) in your browser within 10 minutes (the link opens in one browser), or press **Open** in the Room panel.\n\n`
+      return `\n\n> 이 세션에서 브라우저 패널에 열지 못했습니다(${why}). 10분 안에 내 브라우저에서 [미리보기를 열어](${url}) 주세요(링크는 브라우저 한 곳에서만 열립니다). 방 패널에서 **열기**를 눌러도 됩니다.\n\n`
   }
-  return `\n\n> This session didn't open it (${why}). Press **Open** in the Room panel${shown?.files?.length ? `, or find it in \`.shared-session/\`` : ''}.\n\n`
+  return `\n\n> 이 세션에서 열지 못했습니다(${why}). 방 패널에서 **열기**를 누르세요${shown?.files?.length ? `. \`.shared-session/\` 폴더에서도 찾을 수 있습니다` : ''}.\n\n`
 }
 
 // A link (ten minutes, one browser) that opens a preview on the preview host name.
@@ -7136,9 +7136,9 @@ async function ensureLocalPreview($: $, room: ShareRoom, s: RoomScope, shown: Sh
     path = shown.path ?? '/',
     pid = shown.pid
   const epoch = pid ? s.epoch(pid) : 0
-  if (!sameRoom(room, s) || s.mode !== 'guest') return { error: 'This shared session is no longer open.' }
+  if (!sameRoom(room, s) || s.mode !== 'guest') return { error: '이 공유 세션은 이제 열려 있지 않아요.' }
   if (!pid || !PREVIEW_ID.test(pid) || shown.closed || !validPort(port) || !path.startsWith('/') || /[\x00-\x20\\]/.test(path))
-    return { error: 'That preview has ended or has no valid localhost address.' }
+    return { error: '끝난 미리보기이거나 올바른 localhost 주소가 없어요.' }
   const owner: RunOwner = 'window' in ask ? 'window' : 'listener',
     runs = s.children.listeners
   const bind: LocalBind = 'window' in ask ? { port: 0, strict: false } : ask.bind
@@ -7153,16 +7153,16 @@ async function ensureLocalPreview($: $, room: ShareRoom, s: RoomScope, shown: Sh
     (owner === 'window' ||
       (run.owner === 'listener' && (!bind.strict || (run.started ? run.localPort === bind.port : run.bind.strict && run.bind.port === bind.port))))
   for (let run = runs.get(pid); run && !fits(run); run = runs.get(pid)) {
-    if ('keepWindow' in ask && ask.keepWindow && windowServes(s, pid)) return { error: "It's open in the preview window.", inWindow: true }
+    if ('keepWindow' in ask && ask.keepWindow && windowServes(s, pid)) return { error: "미리보기 창에 열려 있어요.", inWindow: true }
     await stopLocalPreview($, pid, false, s)
-    if (!localRequestCurrent(room, s, pid, epoch)) return { error: 'The local mapping was cancelled.' }
+    if (!localRequestCurrent(room, s, pid, epoch)) return { error: '로컬 연결이 취소됐어요.' }
   }
   if (owner === 'window' && (!(await windowInterest($, pid, s)) || !localRequestCurrent(room, s, pid, epoch)))
-    return { error: 'The preview window closed, or the host no longer shares this preview.' }
+    return { error: '미리보기 창이 닫혔거나, 방장이 더 이상 이 미리보기를 공유하지 않아요.' }
   let run = runs.get(pid),
     made: LocalPreviewRun | undefined
   // Another start meanwhile, for somewhere else: not this one's to take over.
-  if (run && !fits(run)) return { error: 'The local mapping was cancelled.' }
+  if (run && !fits(run)) return { error: '로컬 연결이 취소됐어요.' }
   if (!run) {
     let settle!: (ready: boolean) => void
     const ready = new Promise<boolean>(done => {
@@ -7201,7 +7201,7 @@ async function startLocalPreview($: $, room: ShareRoom, pid: string, run: LocalP
     // page for long: eight seconds to say it's listening, then it's stopped.
     run.timer = $.clock.after(8_000, () => {
       if (runs.get(pid) === run && !run.started) {
-        run.error = `Local preview on localhost:${run.port} took too long to start. Press Open in the Room to retry.`
+        run.error = `localhost:${run.port} 로컬 미리보기가 너무 오래 걸려 시작하지 못했어요. 방에서 「열기」를 눌러 다시 해 주세요.`
         void stopLocalPreview($, pid, false, run.scope)
       }
     })
@@ -7216,7 +7216,7 @@ async function startLocalPreview($: $, room: ShareRoom, pid: string, run: LocalP
       }
       if (message.state === 'ready') {
         if (run.started || !validPort(message.port) || (run.bind.strict && message.port !== run.bind.port)) {
-          run.error = 'The local preview did not report a valid listening port. Press Open in the Room to retry.'
+          run.error = '로컬 미리보기가 올바른 포트를 알려 주지 않았어요. 방에서 「열기」를 눌러 다시 해 주세요.'
           void stopLocalPreview($, pid, false, run.scope)
           break
         }
@@ -7251,10 +7251,10 @@ async function startLocalPreview($: $, room: ShareRoom, pid: string, run: LocalP
         if (message.code === 'EADDRINUSE' || message.code === 'DENIED') run.refused = message.code === 'DENIED' ? 'denied' : 'taken'
         run.error =
           message.code === 'EADDRINUSE'
-            ? `localhost:${run.bind.port} is already in use on this computer. Nothing of yours was stopped.`
+            ? `localhost:${run.bind.port} 포트는 이 컴퓨터에서 이미 쓰고 있어요. 내 프로그램은 아무것도 멈추지 않았어요.`
             : message.code === 'DENIED'
-              ? `This computer doesn't let Claude Code listen on localhost:${run.bind.port}${run.bind.port < 1024 ? ' (on Linux, ports below 1024 need administrator rights)' : ''}.`
-              : `Couldn't forward the host's localhost:${run.port}. Check the host is connected, then press Open in the Room to retry.`
+              ? `이 컴퓨터에서는 Claude Code가 localhost:${run.bind.port} 포트를 쓸 수 없어요${run.bind.port < 1024 ? '(Linux에서는 1024 아래 포트에 관리자 권한이 필요해요)' : ''}.`
+              : `방장의 localhost:${run.port} 포트를 전달하지 못했어요. 방장이 연결돼 있는지 확인한 뒤 방에서 「열기」를 눌러 다시 해 주세요.`
         if (run.started) {
           run.failed = true
           await runTrouble($, room, pid, run, 'failed')
@@ -7264,7 +7264,7 @@ async function startLocalPreview($: $, room: ShareRoom, pid: string, run: LocalP
       }
     }
     if ((await ended) === 'NODE')
-      run.error = 'Local previews need Node 22.18 or later on this computer. Install it and press Open in the Room, or choose Public link.'
+      run.error = '로컬 미리보기를 쓰려면 이 컴퓨터에 Node 22.18 이상이 필요해요. 설치한 뒤 방에서 「열기」를 누르거나 「공개 링크」를 골라 주세요.'
   } catch {
     // Never echo child diagnostics or credentials: the run's own words stand.
   } finally {
@@ -7287,7 +7287,7 @@ async function runTrouble($: $, room: ShareRoom, pid: string, run: LocalPreviewR
   const say = SAY[run.owner]
   if (what !== 'channel') {
     if (run.owner === 'listener')
-      $.ui.toast(what === 'stopped' ? `Local preview on localhost:${run.localPort} stopped. Press Open in the Room to reconnect.` : run.error)
+      $.ui.toast(what === 'stopped' ? `localhost:${run.localPort} 로컬 미리보기가 멈췄어요. 방에서 「열기」를 눌러 다시 연결해 주세요.` : run.error)
     return
   }
   const error = code === 'BUSY' ? say.busy : code === 'AUTH' ? say.refused : code === 'CONNECT' ? say.connect(room.host, run.port) : ''
@@ -7442,14 +7442,14 @@ async function restoreLocalPreviews($: $) {
     else if (opened.refused) busy.push(at)
   }
   const why = [
-    busy.length ? `${portsSaid(busy)} ${busy.length === 1 ? 'is' : 'are'} in use here now` : '',
-    denied.length ? `this computer doesn't let Claude Code listen on ${portsSaid(denied)}` : '',
+    busy.length ? `지금 이 컴퓨터에서 ${portsSaid(busy)} 포트를 쓰고 있어요` : '',
+    denied.length ? `이 컴퓨터에서는 Claude Code가 ${portsSaid(denied)} 포트를 쓸 수 없어요` : '',
   ]
     .filter(Boolean)
-    .join(', and ')
+    .join(', ')
   if (failed.length)
     $.ui.toast(
-      `${portsSaid(failed)} of ${room.host}'s ${failed.length === 1 ? "wasn't" : "weren't"} forwarded again${why ? `: ${why}` : ''}. Press Open in the Room when ready.`,
+      `${room.host}님의 ${portsSaid(failed)} 포트를 다시 연결하지 못했어요${why ? `: ${why}` : ''}. 준비되면 방에서 「열기」를 눌러 주세요.`,
     )
 }
 
@@ -7466,10 +7466,10 @@ async function openPublicPreview($: $, shown: ShareShown, surface?: RenderSurfac
   const live = async () => localRequestCurrent(room, s, pid, epoch)
   if (!(await live())) return
   const url = await previewTicket($, room, pid, shown.path)
-  if (!url) return void $.ui.toast('That preview has ended or is not reachable')
+  if (!url) return void $.ui.toast('끝난 미리보기이거나 연결할 수 없어요')
   await showPage($, room, url, surface, live, {
-    copied: 'Public preview link copied: open it within 10 minutes',
-    said: `Public preview link, for 10 minutes: ${url}`,
+    copied: '공개 미리보기 링크를 복사했어요. 10분 안에 열어 주세요',
+    said: `공개 미리보기 링크(10분 동안): ${url}`,
   })
 }
 
@@ -7497,7 +7497,7 @@ type WindowChoice =
 // browser refused, and the like. A room's own (a preview's first Open and
 // its cost, the window's welcome) are said once in that room (its scope's).
 const saidOnce = new Set<string>()
-const WINDOW_CLOSING = 'The preview window is still closing. Open the preview again in a moment.'
+const WINDOW_CLOSING = '미리보기 창이 아직 닫히는 중이에요. 잠시 뒤 미리보기를 다시 열어 주세요.'
 // How long each of the window's shell steps may take (sh's `within`): a look
 // at a profile, its settings, a close (which waits up to 3 s) and a profile's
 // cleanup all answer well inside it; the browser look can ask a Firefox
@@ -7505,7 +7505,7 @@ const WINDOW_CLOSING = 'The preview window is still closing. Open the preview ag
 const WINDOW_STEP_MS = 15_000,
   BROWSER_LOOK_MS = 30_000
 // This session closed its own window as its proxy ended under it (routes the proxy refused, looks that failed).
-const windowLost = (host: string) => `The preview window closed: its connection to ${host}'s previews stopped working. Press Open preview to open it again.`
+const windowLost = (host: string) => `미리보기 창이 닫혔어요: ${host}님의 미리보기와 연결이 끊겼어요. 「미리보기 열기」를 눌러 다시 열어 주세요.`
 
 // Looked for once a room (its scope's). A look that failed (the shell
 // itself, no platform line) says nothing about this computer: it isn't kept,
@@ -7542,9 +7542,9 @@ async function sessionBus($: $): Promise<boolean> {
 // `wait: false` (a drawing): what's known now; the browser is looked for
 // meanwhile, and the rows draw again once it's known.
 async function windowChoice($: $, wait = true, s: RoomScope = scope): Promise<WindowChoice | null> {
-  if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return { window: false, reason: 'SHARED_SESSION_NO_BROWSER=1 opens no browser' }
+  if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return { window: false, reason: 'SHARED_SESSION_NO_BROWSER=1이라 브라우저를 열지 않아요' }
   if ((await $.env.get('SSH_CONNECTION')) || (await $.env.get('SSH_TTY')))
-    return { window: false, reason: "this is an SSH session, so a window wouldn't open on your screen" }
+    return { window: false, reason: "SSH 세션이라 창이 내 화면에 열리지 않아요" }
   if (!wait && !s.window.detection.done) {
     // Drawn again once known. After a look that failed, a drawing doesn't look again: the next Open does.
     if (!s.window.detection.failed)
@@ -7554,25 +7554,25 @@ async function windowChoice($: $, wait = true, s: RoomScope = scope): Promise<Wi
     return null
   }
   const found = await detectBrowser($, s)
-  if (found.failed) return { window: false, reason: "looking for a browser here didn't work (it's tried again at the next Open)" }
-  if (found.platform === 'unsupported') return { window: false, reason: 'preview windows work on macOS and Linux' }
+  if (found.failed) return { window: false, reason: "이 컴퓨터에서 브라우저를 찾지 못했어요(다음에 「열기」를 누르면 다시 찾아요)" }
+  if (found.platform === 'unsupported') return { window: false, reason: '미리보기 창은 macOS와 Linux에서만 열 수 있어요' }
   if (found.platform === 'linux' && !(await $.env.get('DISPLAY')) && !(await $.env.get('WAYLAND_DISPLAY')))
-    return { window: false, reason: 'there is no display for a window here (DISPLAY and WAYLAND_DISPLAY are unset)' }
+    return { window: false, reason: '창을 띄울 디스플레이가 없어요(DISPLAY와 WAYLAND_DISPLAY가 비어 있어요)' }
   if (!found.browser)
-    return { window: false, reason: 'no Chrome, Edge, Brave, Chromium, Firefox, Vivaldi or Opera was found (a snap one cannot be used)', none: true }
+    return { window: false, reason: 'Chrome, Edge, Brave, Chromium, Firefox, Vivaldi, Opera 중 어느 것도 찾지 못했어요(snap으로 설치한 것은 쓸 수 없어요)', none: true }
   const name = browserName(found.browser),
     family = browserFamily(found.browser, found)
   // Launched as the other kind, a browser could open the address in the person's own profile.
-  if (!family) return { window: false, reason: `${name} can't be used for preview windows, which need a Chromium-family browser or Firefox`, none: true }
+  if (!family) return { window: false, reason: `${name} 브라우저는 미리보기 창에 쓸 수 없어요. Chromium 계열 브라우저나 Firefox가 필요해요`, none: true }
   // Firefox's hand-off of a second address goes only to the window's own profile from 67 on; the settings are tested from FIREFOX_MIN.
   if (family === 'firefox' && (found.gecko ?? 0) < FIREFOX_MIN)
     return found.gecko
-      ? { window: false, reason: `${name} ${found.gecko} is too old for preview windows, which need Firefox ${FIREFOX_MIN} or newer`, update: name }
-      : { window: false, reason: `${name}'s version couldn't be read, and preview windows need Firefox ${FIREFOX_MIN} or newer` }
+      ? { window: false, reason: `${name} ${found.gecko} 버전은 너무 오래돼 미리보기 창에 쓸 수 없어요. Firefox ${FIREFOX_MIN} 이상이 필요해요`, update: name }
+      : { window: false, reason: `${name} 버전을 읽지 못했어요. 미리보기 창에는 Firefox ${FIREFOX_MIN} 이상이 필요해요` }
   if (family === 'firefox' && found.platform === 'linux' && (await firefoxTooDeep($)))
     return {
       window: false,
-      reason: `the preview window's profile folder is too deep for Firefox on Linux (${FIREFOX_PATH_MAX} bytes at most; set CLAUDE_CONFIG_DIR to a shorter path)`,
+      reason: `미리보기 창의 프로필 폴더 경로가 Linux의 Firefox에서 쓰기에 너무 길어요(최대 ${FIREFOX_PATH_MAX}바이트, CLAUDE_CONFIG_DIR를 더 짧은 경로로 바꿔 주세요)`,
     }
   return { window: true, platform: found.platform, browser: found.browser, name, family, ...(found.isDefault ? { isDefault: true as const } : {}) }
 }
@@ -7592,7 +7592,7 @@ function noteOnce($: $, key: string, text: string, s?: RoomScope) {
 
 async function browserDirOf($: $): Promise<string> {
   const dir = await configDirOf($)
-  if (!dir) throw new Error('No Claude configuration directory is available')
+  if (!dir) throw new Error('Claude 설정 폴더를 찾을 수 없어요')
   return `${dir}/shared-session/browser`
 }
 
@@ -7642,10 +7642,10 @@ async function windowLook($: $, profile: string): Promise<{ seen: WindowSeen | n
   if (code === 0) return { seen: windowOf(out, profile) }
   return {
     why: late
-      ? 'the look at its profile took too long'
+      ? '프로필 확인이 너무 오래 걸림'
       : code === null
-        ? "the look at its profile didn't run"
-        : `the look at its profile ended with code ${code}`,
+        ? "프로필 확인이 실행되지 않음"
+        : `프로필 확인 실패(코드 ${code})`,
   }
 }
 
@@ -7717,7 +7717,7 @@ type Asked = { port: number; seen: boolean; late: (() => Promise<void>) | null }
 // over here; one whose host the window's proxy can't take, it leaves out
 // itself and says so (its `upstream` line, `runBrowserProxy`): both said in
 // the same words, once.
-const UPSTREAM_NOT_TAKEN = "The preview window doesn't use your proxy setting: it isn't an address its proxy can take (a host name or IP address, and a port)."
+const UPSTREAM_NOT_TAKEN = "미리보기 창은 내 프록시 설정을 쓰지 않아요: 창의 프록시가 받을 수 있는 주소(호스트 이름이나 IP 주소와 포트)가 아니에요."
 async function upstreamProxy($: $): Promise<Upstream | null> {
   const env = upstreamFromEnv({
     HTTPS_PROXY: await $.env.get('HTTPS_PROXY'),
@@ -7728,19 +7728,19 @@ async function upstreamProxy($: $): Promise<Upstream | null> {
     no_proxy: await $.env.get('no_proxy'),
   })
   if (env.userinfo)
-    noteOnce($, 'userinfo', "Your proxy setting has a user name or password, which the preview window's proxy doesn't use: sign-ins in the window may fail.")
+    noteOnce($, 'userinfo', "내 프록시 설정에 사용자 이름이나 비밀번호가 있는데, 미리보기 창의 프록시는 이를 쓰지 않아요. 창 안에서 로그인이 안 될 수 있어요.")
   if (env.unsupported)
     noteOnce(
       $,
       'unsupported',
-      "The preview window doesn't use your https:// or socks4:// proxy setting: its proxy goes on only through http:// and socks5:// proxies.",
+      "미리보기 창은 https://, socks4:// 프록시 설정을 쓰지 않아요. 창의 프록시는 http://, socks5:// 프록시로만 이어져요.",
     )
   if (env.invalid) noteOnce($, 'invalid', UPSTREAM_NOT_TAKEN)
   if (env.upstream) return env.upstream
   if ((await detectBrowser($)).platform !== 'darwin') return null
   const system = upstreamFromScutil((await sh($, 'scutil --proxy 2>/dev/null\n', WINDOW_STEP_MS)).out)
   if (system.invalid) noteOnce($, 'invalid', UPSTREAM_NOT_TAKEN)
-  if (system.pac) noteOnce($, 'pac', "PAC proxies aren't followed; Google sign-in may fail in the preview window.")
+  if (system.pac) noteOnce($, 'pac', "PAC 프록시는 따르지 않아요. 미리보기 창에서 Google 로그인이 안 될 수 있어요.")
   return system.upstream
 }
 
@@ -7879,7 +7879,7 @@ async function lanRefused($: $, proxy: BrowserProxy) {
   noteOnce(
     $,
     'lan',
-    `The preview window refused a request to your local network (a private address). Pages from ${room.host} can't reach your network; set SHARED_SESSION_PREVIEW_LAN=1 where Claude Code starts to allow it.`,
+    `미리보기 창이 내 로컬 네트워크(사설 주소)로 가는 요청을 막았어요. ${room.host}님의 페이지는 내 네트워크에 닿을 수 없어요. 허용하려면 Claude Code를 시작하는 곳에 SHARED_SESSION_PREVIEW_LAN=1을 설정해 주세요.`,
   )
 }
 
@@ -8029,8 +8029,8 @@ async function blockedPort($: $, proxy: BrowserProxy, port: number) {
     // Forwarded already, just now: the room's next page lists it, and the
     // routes follow it (`takeRoomList`).
     if (answer.shared) return void syncBrowserRoutes($, s)
-    const said = `Your preview tried localhost:${port}, which ${room.host} hasn't shared.`
-    $.ui.toast(answer.delivered ? `${said} The request went to ${room.host}.` : `${said} Ask ${room.host} to share it.`)
+    const said = `내 미리보기가 localhost:${port}에 접속하려 했지만, ${room.host}님이 공유하지 않은 포트예요.`
+    $.ui.toast(answer.delivered ? `${said} ${room.host}님께 요청을 보냈어요.` : `${said} ${room.host}님께 공유를 부탁해 보세요.`)
   } finally {
     s.window.needAsking.delete(port)
   }
@@ -8049,10 +8049,10 @@ async function refusedOf($: $, pid: string): Promise<Refused> {
 // `promised`: the band's Open preview opens what reconnects it (`bandEntry`);
 // otherwise the Room's own button for it is named.
 function refusedWords(host: string, port: number, r: Refused, promised: boolean): string {
-  const said = `${host}'s side refused the preview window's connection to localhost:${port}`
-  const which = r.kind === 'dependency' ? `, which ${r.dependency === true ? 'a preview uses' : `the preview of localhost:${r.dependency} uses`}` : ''
-  if (!promised) return `${said}${which}. Press Open on localhost:${port} in Room → Shown to reconnect.`
-  return `${said}${which}. Press Open preview${r.kind === 'dependency' ? ' for that page' : ''} to reconnect.`
+  const said = `${host}님 쪽에서 미리보기 창의 localhost:${port} 연결을 거절했어요`
+  const which = r.kind === 'dependency' ? ` ${r.dependency === true ? '(미리보기가 쓰는 포트)' : `(localhost:${r.dependency} 미리보기가 쓰는 포트)`}` : ''
+  if (!promised) return `${said}${which}. 다시 연결하려면 방의 「보여 준 것」에서 localhost:${port}의 「열기」를 눌러 주세요.`
+  return `${said}${which}. 다시 연결하려면 ${r.kind === 'dependency' ? '그 페이지의 ' : ''}「미리보기 열기」를 눌러 주세요.`
 }
 
 // What the toast for a refusal says: computed when it's said, so it names
@@ -8101,7 +8101,7 @@ function sayWindowLater($: $, room: ShareRoom, pid: string, run: LocalPreviewRun
         if (![...authority.values()].some(a => a.pid === pid)) {
           if (authority.has(run.port) || s.window.stopSaid.has(pid)) return
           s.window.stopSaid.add(pid)
-          return void $.ui.toast(`${room.host} stopped sharing localhost:${run.port}.`)
+          return void $.ui.toast(`${room.host}님이 localhost:${run.port} 공유를 끝냈어요.`)
         }
         await say()
       })().catch(() => {})
@@ -8199,16 +8199,16 @@ async function openInWindow(
 // What opens a preview without the window, said after trouble with it, in
 // this surface's words (`shownIn`). `ifNone`: the window may still show.
 async function windowRemedy($: $, why: WindowWhy, ifNone: boolean): Promise<string> {
-  const lead = ifNone ? 'If none opens, ' : ''
+  const lead = ifNone ? '창이 열리지 않으면 ' : ''
   if ('always' in why) {
-    const setting = (await isDesktop($)) ? "Claude's browser" : 'Your browser'
-    return `${lead}${ifNone ? 'set' : 'Set'} Previews to ${setting} in Room → Settings, and a preview whose ports are free here opens there instead.`
+    const setting = (await isDesktop($)) ? "Claude 브라우저" : '내 브라우저'
+    return `${lead}방의 「설정」에서 「미리보기」를 「${setting}」로 바꾸면, 여기서 포트가 비어 있는 미리보기는 그곳에서 열려요.`
   }
   if ('refused' in why && why.refused === 'taken') {
-    const viewer = (await shownIn($)) === 'pane' ? "Claude's browser" : 'your browser'
-    return `${lead}${ifNone ? 'free' : 'Free'} localhost:${why.port} on this computer and press Open preview to open it in ${viewer} instead.`
+    const viewer = (await shownIn($)) === 'pane' ? "Claude 브라우저" : '내 브라우저'
+    return `${lead}이 컴퓨터에서 localhost:${why.port} 포트를 비운 뒤 「미리보기 열기」를 누르면 ${viewer}에서 열려요.`
   }
-  return ifNone ? 'If none opens, press Open preview to try again.' : ''
+  return ifNone ? '창이 열리지 않으면 「미리보기 열기」를 눌러 다시 해 주세요.' : ''
 }
 
 // One open of the window as it goes (`openWindow`): the page, and why the
@@ -8255,7 +8255,7 @@ async function windowStep<T>(open: WindowOpen, step: Promise<T>): Promise<T> {
 // room's still there, so nothing is put away, but nothing more opens the page.
 const pageStopped = (open: WindowOpen) => open.s.epoch(open.page.pid) !== open.epoch
 
-const PROFILE_UNMADE = "its private profile couldn't be made"
+const PROFILE_UNMADE = "전용 프로필을 만들지 못했어요"
 
 // The page in the room's window, in four steps: the profile it opens on, the
 // proxy and tunnel that reach the host, the browser, and what's said. Left
@@ -8349,7 +8349,7 @@ async function openLook($: $, open: WindowOpen, profile: string): Promise<Window
 // A look that still knows nothing: the open writes, starts and closes
 // nothing more, and the person presses Open preview again.
 function unknownLook($: $, why: string): WindowOutcome {
-  $.ui.toast(`Couldn't tell whether the preview window is open (${why}). Press Open preview again.`)
+  $.ui.toast(`미리보기 창이 열려 있는지 확인하지 못했어요: ${why}. 「미리보기 열기」를 다시 눌러 주세요.`)
   return 'done'
 }
 
@@ -8402,10 +8402,10 @@ async function readyProxy($: $, open: WindowOpen): Promise<BrowserProxy | Window
   // Without Node nothing here opens a forwarded preview (its listeners run
   // under Node too): only the public link, which goes through the room.
   if ('error' in proxy && proxy.error === 'NODE') {
-    $.ui.toast('Preview windows need Node 22.18 or later on this computer. Install it, then press Open preview again, or choose Public link in Room → Shown.')
+    $.ui.toast('미리보기 창을 쓰려면 이 컴퓨터에 Node 22.18 이상이 필요해요. 설치한 뒤 「미리보기 열기」를 다시 누르거나, 방의 「보여 준 것」에서 「공개 링크」를 골라 주세요.')
     return 'done'
   }
-  if ('error' in proxy) return { failed: "its proxy didn't start" }
+  if ('error' in proxy) return { failed: "창의 프록시가 시작되지 않았어요" }
   if (open.alive && (open.alive.port !== proxy.port || open.alive.family !== choice.family)) {
     await windowStep(open, killWindow($, profile, true, onPort()))
     // Still closing (Firefox can take a while): a start now would meet it.
@@ -8431,7 +8431,7 @@ async function readyProxy($: $, open: WindowOpen): Promise<BrowserProxy | Window
   // started, and nothing else, may go with it (`idleProxy`).
   if (!tunnel.run) {
     await idleProxy(open, proxy)
-    $.ui.toast(reseated ? RESEATED : (tunnel.error ?? 'That preview could not be opened.'))
+    $.ui.toast(reseated ? RESEATED : (tunnel.error ?? '미리보기를 열지 못했어요.'))
     return 'done'
   }
   await windowStep(open, syncBrowserRoutes($, s))
@@ -8478,8 +8478,8 @@ async function launchWindow($: $, open: WindowOpen, proxy: BrowserProxy): Promis
     const copied = await $.ui.copy({ text: url }).catch(() => ({ isCopied: false }))
     $.ui.toast(
       copied.isCopied
-        ? `${room.host}'s localhost:${page.port} is ready in the ${choice.name} preview window. Its address is copied: paste it into that window's address bar (${url}).`
-        : `${room.host}'s localhost:${page.port} is ready in the ${choice.name} preview window: type ${url} into that window's address bar.`,
+        ? `${room.host}님의 localhost:${page.port} 미리보기가 ${choice.name} 미리보기 창에서 준비됐어요. 주소를 복사했으니 그 창의 주소창에 붙여 넣어 주세요(${url}).`
+        : `${room.host}님의 localhost:${page.port} 미리보기가 ${choice.name} 미리보기 창에서 준비됐어요. 그 창의 주소창에 이 주소를 입력해 주세요: ${url}`,
     )
     return 'opened'
   }
@@ -8520,14 +8520,14 @@ async function launchWindow($: $, open: WindowOpen, proxy: BrowserProxy): Promis
     // Listened for no more, unless a window slow to show may still open the page.
     if (came !== 'unseen') proxy.asks.delete(asks)
   }
-  if (came === 'failed') return fail(`${choice.name} didn't start`)
+  if (came === 'failed') return fail(`${choice.name} 브라우저가 시작되지 않았어요`)
   if (came === 'unseen') {
     asks.late = async () => {
       if (!stillInRoom(room, s) || proxy.stopped || s.children.windowProxy !== proxy) return
       await windowOpened($, open, port, !pageStopped(open))
       $.ui.invalidate('ui.render')
     }
-    $.ui.toast(`${choice.name} didn't open a preview window within 10 seconds. ${await windowRemedy($, open.why, true)}`)
+    $.ui.toast(`${choice.name} 브라우저가 10초 안에 미리보기 창을 열지 않았어요. ${await windowRemedy($, open.why, true)}`)
     return 'done'
   }
   return 'seen'
@@ -8558,12 +8558,12 @@ async function announceWindow($: $, open: WindowOpen, proxy: BrowserProxy): Prom
   if (open.alive) return 'opened'
   // The only browser that could be is the person's default: macOS can hand it links from other apps.
   const links = choice.isDefault
-    ? ` ${choice.name} is your default browser, so links you open in other apps may go to this window while it's open: quit it (⌘Q) when you're done.`
+    ? ` 기본 브라우저가 ${choice.name} 브라우저라서, 이 창이 열려 있는 동안 다른 앱에서 연 링크가 이 창으로 갈 수 있어요. 다 쓰면 창을 종료해 주세요(⌘Q).`
     : ''
   noteOnce(
     $,
     'welcome',
-    `Opened ${room.host}'s localhost:${page.port} in a separate ${choice.name} window. In it, localhost reaches only what ${room.host} shares; your own servers aren't touched.${links}`,
+    `${room.host}님의 localhost:${page.port} 미리보기를 별도의 ${choice.name} 창에 열었어요. 이 창에서 localhost는 ${room.host}님이 공유한 것에만 연결되고, 내 서버에는 영향이 없어요.${links}`,
     s,
   )
   if (!proxy.seen.has(page.port)) {
@@ -8573,7 +8573,7 @@ async function announceWindow($: $, open: WindowOpen, proxy: BrowserProxy): Prom
       noteOnce(
         $,
         'ignored',
-        `The preview window doesn't seem to use its proxy (a browser your organization manages can ignore it), so it may not reach ${room.host}'s localhost:${page.port}.${remedy ? ` ${remedy}` : ''}`,
+        `미리보기 창이 프록시를 쓰지 않는 것 같아요(조직에서 관리하는 브라우저는 프록시를 무시할 수 있어요). 그래서 ${room.host}님의 localhost:${page.port}에 연결되지 않을 수 있어요.${remedy ? ` ${remedy}` : ''}`,
         s,
       )
     })
@@ -8647,7 +8647,7 @@ async function checkWindow($: $, s: RoomScope, profile: string) {
   // Three looks that failed can't tell it's gone: this session's window, if
   // it's still up on its port, closes before that port is forgotten (as the
   // proxy's end closes it, `runBrowserProxy`; this write may come first).
-  if (seen === undefined && w.port && (await killWindow($, profile, true, w.port)) && s.live) $.ui.toast(windowLost((await read($, roomA))?.host ?? 'the host'))
+  if (seen === undefined && w.port && (await killWindow($, profile, true, w.port)) && s.live) $.ui.toast(windowLost((await read($, roomA))?.host ?? '방장'))
   const proxy = s.children.windowProxy
   if (proxy) await finishBrowserProxy(proxy)
   // Its port is no window of this session's any more (`openWindow`).
@@ -8682,8 +8682,8 @@ async function restorePreviewWindow($: $) {
     if (another || (alive === undefined && !closed)) return
     $.ui.toast(
       proxy.error === 'EADDRINUSE'
-        ? `The preview window closed: its proxy's port (${w.port}) was taken while the plugin reloaded. Press Open preview to open it again.`
-        : "The preview window closed: its proxy couldn't start again. Press Open preview to open it again.",
+        ? `미리보기 창이 닫혔어요: 플러그인을 다시 불러오는 동안 창의 프록시 포트(${w.port})를 다른 프로그램이 차지했어요. 「미리보기 열기」를 눌러 다시 열어 주세요.`
+        : "미리보기 창이 닫혔어요: 창의 프록시가 다시 시작되지 않았어요. 「미리보기 열기」를 눌러 다시 열어 주세요.",
     )
     return
   }
@@ -9061,7 +9061,7 @@ async function ownerLook($: $, port: number, web = false): Promise<string | null
 }
 
 // The host's word for a port it can't share on, as /share-preview says it.
-const relayedSaid = (port: number) => `localhost:${port} is another shared session's preview forwarded to this computer, so it can't be shared on.`
+const relayedSaid = (port: number) => `localhost:${port} 포트는 다른 공유 세션의 미리보기가 이 컴퓨터로 전달된 것이라 다시 공유할 수 없어요.`
 // A share the host asked for that isn't made, and why.
 type ShareRefused = { refused: string }
 
@@ -9075,7 +9075,7 @@ async function relayedNow($: $, s: RoomScope, port: number): Promise<boolean> {
   noteOnce(
     $,
     `relayed-${port}`,
-    `Teammates' connections to localhost:${port} are refused: it's another shared session's preview forwarded to this computer now, so it can't be shared on. Stop it in Room → Shown.`,
+    `손님의 localhost:${port} 연결을 거절하고 있어요: 지금 이 포트는 다른 공유 세션의 미리보기가 이 컴퓨터로 전달된 것이라 다시 공유할 수 없어요. 방의 「보여 준 것」에서 끝내 주세요.`,
     s,
   )
   return true
@@ -9176,7 +9176,7 @@ const hostHere = (room: ShareRoom) => sameRoom(room, scope) && scope.mode === 'h
 // The host's word once ports are forwarded: which, and where to stop them.
 // Never where teammates open them: Claude's browser, their own or a
 // separate window is each teammate's own setting.
-const forwardedSaid = (ports: number[]) => `Teammates can reach ${portList(ports)} now. Stop ${ports.length > 1 ? 'them' : 'it'} in Room → Shown.`
+const forwardedSaid = (ports: number[]) => `이제 손님이 ${portList(ports)} 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.`
 
 // What the servers a page uses beside it came to: the questions put to the
 // host in the row above the prompt (the first there now, the rest in turn),
@@ -9297,22 +9297,21 @@ async function askRelated($: $, room: ShareRoom, port: number, related: readonly
 // and how to share what it doesn't ask about.
 function relatedSaid({ asked, left }: RelatedOffer): string {
   if (!asked.length && !left.length) return ''
-  const one = (count: number, it: string, them: string) => (count > 1 ? them : it)
-  const inRow = ` too from the row above the prompt${asked.length > 1 ? ', one at a time' : ''}`
+  const inRow = ` 입력창 위 줄에서${asked.length > 1 ? ' 하나씩' : ''}`
   // A question a service: "share it", "share them"; a service asked about
   // in several, each question named.
   const split = asked.length > servicesOf(asked.flat()).length
-  if (!left.length && !split) return ` It looks like it also uses ${alsoUses(asked.flat())}: share ${one(asked.length, 'it', 'them')}${inRow}.`
+  if (!left.length && !split) return ` 이 페이지는 ${alsoUses(asked.flat())}도 쓰는 것 같습니다.${inRow} 함께 공유할 수 있습니다.`
   const ports = (list: readonly DiscoveredService[]) => portList(list.map(s => s.port))
   const commands = (list: readonly DiscoveredService[]) => everyName(list.map(s => `/share-preview ${s.port}`))
   const declined = left.filter(l => l.declined).map(l => l.service),
     other = left.filter(l => !l.declined).map(l => l.service)
   const found = [...asked.flat(), ...left.map(l => l.service)].sort((a, b) => a.port - b.port)
   return [
-    ` It looks like it also uses ${alsoUses(found)}.`,
-    asked.length ? ` Share ${everyService(asked, false)}${inRow}.` : '',
-    declined.length ? ` You said Not now to ${ports(declined)} in this room; to share ${one(declined.length, 'it', 'them')}, use ${commands(declined)}.` : '',
-    other.length ? ` To share ${ports(other)} too, use ${commands(other)}.` : '',
+    ` 이 페이지는 ${alsoUses(found)}도 쓰는 것 같습니다.`,
+    asked.length ? `${inRow} ${everyService(asked, false)}도 공유할 수 있습니다.` : '',
+    declined.length ? ` 이 방에서 ${ports(declined)} 포트에 「나중에」라고 답했습니다. 공유하려면 ${commands(declined)} 명령을 입력하세요.` : '',
+    other.length ? ` ${ports(other)}도 공유하려면 ${commands(other)} 명령을 입력하세요.` : '',
   ].join('')
 }
 
@@ -9339,7 +9338,7 @@ async function offerSameAddress($: $, room: ShareRoom, port: number, path: strin
       allowed = Boolean(forwarded && 'pid' in forwarded)
       return allowed
         ? { shared: [port], refused: [] }
-        : { shared: [], refused: [(forwarded && 'refused' in forwarded && forwarded.refused) || `Couldn't allow forwarding localhost:${port}`] }
+        : { shared: [], refused: [(forwarded && 'refused' in forwarded && forwarded.refused) || `localhost:${port} 포트 전달을 허용하지 못했어요`] }
     })
     if (allowed && hostHere(room)) beside = found?.related ?? []
   } finally {
@@ -9357,7 +9356,7 @@ async function offerSameAddress($: $, room: ShareRoom, port: number, path: strin
 // put to the host, nor counted asked.
 async function hostNeed($: $, room: ShareRoom, need: Record<string, unknown>) {
   const port = Number(need.port)
-  const who = cleanLabel(need.name, 40) || 'A guest'
+  const who = cleanLabel(need.name, 40) || '익명'
   const flight = `${roomIdentity(room)} ${port}`
   if (!validPort(port) || !hostHere(room) || hostAsking.has(flight)) return
   if ((await read($, policyA)).files === 'off' || (await forwardedPort($, port))) return
@@ -9375,7 +9374,7 @@ async function hostNeed($: $, room: ShareRoom, need: Record<string, unknown>) {
       // For a page of the guest's window, which one the need doesn't say;
       // a page shared through its link stays that page (`forwardFor`).
       const pid = await forwardFor($, room, port, target.label, true)
-      return typeof pid === 'string' ? { shared: [port], refused: [] } : { shared: [], refused: [pid?.refused ?? `Couldn't share localhost:${port}`] }
+      return typeof pid === 'string' ? { shared: [port], refused: [] } : { shared: [], refused: [pid?.refused ?? `localhost:${port} 포트를 공유하지 못했어요`] }
     })
   } finally {
     hostAsking.delete(flight)
@@ -9388,13 +9387,14 @@ async function hostNeed($: $, room: ShareRoom, need: Record<string, unknown>) {
 // never a port ("Share localhost:3510 and 3511 too? convex-local-backend,
 // beside localhost:3009"); or the port mentioned or needed itself. A
 // question is one service's (`askRelated`): its ports aren't regrouped.
+// 답 값은 영어로 둔다(방을 오가며 다른 사람 플러그인이 글자로 맞춰 봄). 화면에는 answerLabel 로.
 const hostAskYes = (ask: ShareHostAsk) => (ask.kind === 'related' ? 'Share too' : ask.kind === 'mention' ? 'Allow' : 'Share')
 
 function hostAskWords(ask: ShareHostAsk): string {
   if (ask.kind === 'related') return shareTooWords(ask.port, ask.related)
-  if (ask.kind === 'mention') return `Let guests open localhost:${ask.port} at the same address?`
-  if (ask.kind === 'show') return `Share ${serviceName({ port: ask.port, label: ask.label })} with the room?`
-  return `${ask.who ?? 'A guest'}'s preview needs ${serviceName({ port: ask.port, label: ask.label })}`
+  if (ask.kind === 'mention') return `손님이 localhost:${ask.port} 주소를 그대로 열 수 있게 할까요?`
+  if (ask.kind === 'show') return `방에 ${serviceName({ port: ask.port, label: ask.label })} 공유할까요?`
+  return `${ask.who ? `${ask.who}님의` : '손님의'} 미리보기에 필요한 것: ${serviceName({ port: ask.port, label: ask.label })}`
 }
 
 // Guest: the Room panel's Open (and Open preview above the prompt), outside
@@ -9454,7 +9454,7 @@ async function inPane($: $, url: string, what: string, instead: string): Promise
     noteOnce(
       $,
       `pane-refused ${what}`,
-      `Auto mode doesn't let the plugin open ${what} in Claude's browser, so they open ${instead}. Press Allow previews in Claude, in Room → Settings, to let it.`,
+      `자동 모드에서는 플러그인이 Claude 브라우저에서 ${what}를 열 수 없어서 ${instead} 열어요. 방의 설정 탭에서 「Claude에서 미리보기 허용」을 누르면 열 수 있어요.`,
     )
   if (refused && !(await paneAllowed($))) {
     say()
@@ -9480,7 +9480,7 @@ async function inPane($: $, url: string, what: string, instead: string): Promise
 // Claude's browser's preview_start. Its words say what else it lets: the
 // person's own Claude opening pages there without auto mode's review.
 async function allowPane($: $) {
-  if (await allowTools($, [PANE_TOOL], "Previews in Claude allowed: the next one opens in Claude's browser.")) await update($, paneRefusedA, () => false)
+  if (await allowTools($, [PANE_TOOL], "Claude에서 미리보기를 허용했어요: 다음 미리보기부터 Claude 브라우저에서 열려요.")) await update($, paneRefusedA, () => false)
 }
 
 // Where a preview's page opens (at the host's numbers here, a page moved
@@ -9498,20 +9498,20 @@ async function showPage(
   words?: { copied: string; said: string },
 ): Promise<PageShown | null> {
   if (!(await live())) return null
-  if ((await shownIn($)) === 'pane' && (await inPane($, url, 'previews', 'in your browser'))) return 'pane'
+  if ((await shownIn($)) === 'pane' && (await inPane($, url, '미리보기', '내 브라우저에서'))) return 'pane'
   if (!(await live())) return null
   if (await openExternal($, url)) return 'browser'
   if (!(await live())) return null
   const copied = await $.ui.copy({ text: url, surface }).catch(() => ({ isCopied: false }))
   $.ui.toast(
     copied.isCopied
-      ? (words?.copied ?? `${room.host}'s preview is ready at ${url}: the address is copied.`)
-      : (words?.said ?? `${room.host}'s preview is ready at ${url}.`),
+      ? (words?.copied ?? `${room.host}님의 미리보기가 ${url}에 준비됐어요. 주소를 복사했어요.`)
+      : (words?.said ?? `${room.host}님의 미리보기가 ${url}에 준비됐어요.`),
   )
   return copied.isCopied ? 'copied' : 'said'
 }
 
-const portsSaid = (ports: readonly number[]) => ports.map(p => `localhost:${p}`).join(ports.length === 2 ? ' and ' : ', ')
+const portsSaid = (ports: readonly number[]) => ports.map(p => `localhost:${p}`).join(ports.length === 2 ? ', ' : ', ')
 
 // A listener of this preview open here now (not the window's own tunnel).
 function listening(pid: string, s: RoomScope = scope): LocalPreviewRun | null {
@@ -9540,7 +9540,7 @@ function listening(pid: string, s: RoomScope = scope): LocalPreviewRun | null {
 // as opened on its own (`own`).
 type Bound = { url: string; run: LocalPreviewRun; taken: number[]; denied: number[]; failed: string[] }
 type BindResult = Bound | RefusedPort | { inWindow: true } | { error: string }
-const RESEATED = 'The room reconnected you while the preview was opening. Press Open again.'
+const RESEATED = '미리보기를 여는 동안 방에 다시 연결됐어요. 열기를 다시 누르세요.'
 async function bindForOpen(
   $: $,
   room: ShareRoom,
@@ -9576,17 +9576,17 @@ async function bindForOpen(
     const at = flexible ? savedPort(saved.find(p => p.pid === want.pid && p.port === want.port) ?? want) : want.port
     const opened = await ensureLocalPreview($, seat, s, want, { bind: { port: at, strict: !flexible }, ...(keepWindow ? { keepWindow: true as const } : {}) })
     if (opened.made) made.push({ pid: want.pid, run: opened.made })
-    if (!sameRoom(seat, s)) return undo({ error: stillInRoom(seat, s) ? RESEATED : 'This shared session is no longer open.' })
+    if (!sameRoom(seat, s)) return undo({ error: stillInRoom(seat, s) ? RESEATED : '이 공유 세션은 이제 열려 있지 않아요.' })
     if (opened.run) {
       up(want, opened.run)
       continue
     }
     if (opened.inWindow) return undo({ inWindow: true })
     if (policy === 'same' && opened.refused) return undo({ port: want.port, refused: opened.refused })
-    if (policy === 'same' || flexible) return undo({ error: opened.error ?? `Couldn't forward localhost:${want.port}.` })
+    if (policy === 'same' || flexible) return undo({ error: opened.error ?? `localhost:${want.port} 포워딩에 실패했어요.` })
     if (opened.refused === 'denied') denied.push(want.port)
     else if (opened.refused) taken.push(want.port)
-    else failed.push(opened.error ?? `Couldn't forward localhost:${want.port}.`)
+    else failed.push(opened.error ?? `localhost:${want.port} 포워딩에 실패했어요.`)
   }
   const top = bound.find(b => b.pid === page.pid)!
   await commitMappings($, bound)
@@ -9602,16 +9602,16 @@ function elsewhereNote(room: ShareRoom, page: Forwarded, bound: Bound, why: Refu
   const refused = why.refused === 'denied' && why.port === page.port
   return [
     moved
-      ? `${room.host}'s preview opened at localhost:${bound.run.localPort} here, not localhost:${page.port}, ${refused ? "which this computer doesn't let Claude Code listen on" : 'which is in use on this computer'}, so sign-ins registered for localhost:${page.port} won't work.`
-      : `${room.host}'s preview opened at localhost:${page.port} here.`,
+      ? `${room.host}님의 미리보기가 여기서는 localhost:${page.port} 대신 localhost:${bound.run.localPort}에서 열렸어요(${refused ? '이 컴퓨터가 Claude Code 에 그 포트를 열어 주지 않음' : '이 컴퓨터에서 이미 쓰는 포트'}). 그래서 localhost:${page.port}에 등록된 로그인은 작동하지 않아요.`
+      : `${room.host}님의 미리보기가 여기 localhost:${page.port}에서 열렸어요.`,
     bound.taken.length
-      ? `${portsSaid(bound.taken)}, which it uses, ${bound.taken.length === 1 ? 'is' : 'are'} in use here too: the page may reach your own ${bound.taken.length === 1 ? 'server' : 'servers'} there.`
+      ? `이 페이지가 쓰는 ${portsSaid(bound.taken)} 포트도 여기서 이미 사용 중이에요: 페이지가 그 포트의 내 서버에 연결될 수 있어요.`
       : '',
     bound.denied.length
-      ? `This computer doesn't let Claude Code listen on ${portsSaid(bound.denied)}, which it uses: the page can't reach ${bound.denied.length === 1 ? 'it' : 'them'} here.`
+      ? `이 컴퓨터가 Claude Code에 이 페이지가 쓰는 ${portsSaid(bound.denied)} 포트를 허용하지 않아요: 여기서는 페이지가 그 포트에 연결할 수 없어요.`
       : '',
     ...bound.failed,
-    `A separate window would keep ${room.host}'s addresses, but ${noWindow}.`,
+    `${room.host}님의 주소를 그대로 쓰려면 별도 창이 필요한데, 창을 열 수 없어요: ${noWindow}.`,
   ]
     .filter(Boolean)
     .join(' ')
@@ -9625,10 +9625,10 @@ function elsewhereNote(room: ShareRoom, page: Forwarded, bound: Bound, why: Refu
 // else the Open goes on without it. `without`: why no window this time
 // (one just failed): the host's numbers, else elsewhere.
 async function openForwarded($: $, room: ShareRoom, s: RoomScope, shown: ShareShown, surface?: RenderSurface, without?: string): Promise<void> {
-  if (!isForwarded(shown)) return void $.ui.toast('That preview has ended or has no valid localhost address.')
+  if (!isForwarded(shown)) return void $.ui.toast('그 미리보기는 끝났거나 올바른 localhost 주소가 없어요.')
   // The host away: nothing of theirs answers now, so nothing is bound or opened.
   if ((await read($, peopleA)).some(p => p.role === 'host' && !p.online))
-    return void $.ui.toast(`${room.host} is offline, so their previews can't open now. Press Open again once they're back.`)
+    return void $.ui.toast(`${room.host}님이 오프라인이라 지금은 미리보기를 열 수 없어요. 돌아오면 열기를 다시 누르세요.`)
   const page = shown,
     pid = page.pid,
     epoch = s.epoch(pid)
@@ -9649,7 +9649,7 @@ async function openForwarded($: $, room: ShareRoom, s: RoomScope, shown: ShareSh
   const elsewhere = async (why: RefusedPort, noWindow: string) => {
     const bound = await bindForOpen($, room, s, page, uses, 'elsewhere')
     if (!(await live())) return
-    if (!('url' in bound)) return void $.ui.toast('error' in bound ? bound.error : 'That preview could not be opened.')
+    if (!('url' in bound)) return void $.ui.toast('error' in bound ? bound.error : '그 미리보기를 열지 못했어요.')
     if (!(await showPage($, room, bound.url, surface, async () => (await live()) && (await localRunCurrent($, pid, bound.run))))) return
     const note = elsewhereNote(room, page, bound, why, noWindow)
     noteOnce($, `elsewhere ${note}`, note, s)
@@ -9659,7 +9659,7 @@ async function openForwarded($: $, room: ShareRoom, s: RoomScope, shown: ShareSh
   // apart from the host's); their Previews setting does, changed.
   const alwaysFailed = (reason: string) =>
     void $.ui.toast(
-      `Couldn't open the preview window: ${reason}. To open ${room.host}'s localhost:${page.port} without one, change Previews in Room → Settings.`,
+      `미리보기 창을 열지 못했어요: ${reason}. 창 없이 ${room.host}님의 localhost:${page.port} 페이지를 열려면 방의 설정 탭에서 미리보기 설정을 바꾸세요.`,
     )
   const viaWindow = async (c: Extract<WindowChoice, { window: true }>, why: WindowWhy): Promise<void> => {
     const outcome = await openInWindow($, room, s, c, page, why)
@@ -9668,7 +9668,7 @@ async function openForwarded($: $, room: ShareRoom, s: RoomScope, shown: ShareSh
     // A port taken here: the page elsewhere, its note saying why there's no window.
     if ('refused' in why) return elsewhere(why, outcome.failed)
     // Open in the window before (its ports may be free here): the host's numbers, else elsewhere.
-    $.ui.toast(`Couldn't open the preview window: ${outcome.failed}.`)
+    $.ui.toast(`미리보기 창을 열지 못했어요: ${outcome.failed}.`)
     return openForwarded($, room, s, page, surface, outcome.failed)
   }
   if (!without && (await previewOpenOf($)) === 'window') {
@@ -9703,17 +9703,16 @@ async function openForwarded($: $, room: ShareRoom, s: RoomScope, shown: ShareSh
     if (!where) return
     // Said once a room: what the host's numbers here cost.
     const ports = [page.port, ...uses.filter(u => listening(u.pid, s)?.localPort === u.port).map(u => u.port)]
-    const them = ports.length === 1 ? 'it' : 'them'
     const opened =
       where === 'pane'
-        ? `Opened ${room.host}'s localhost:${page.port} in Claude's browser.`
+        ? `${room.host}님의 localhost:${page.port} 페이지를 Claude 브라우저에서 열었어요.`
         : where === 'browser'
-          ? `Opened ${room.host}'s localhost:${page.port} in your browser.`
-          : `${room.host}'s localhost:${page.port} is forwarded here, at the same address.`
+          ? `${room.host}님의 localhost:${page.port} 페이지를 내 브라우저에서 열었어요.`
+          : `${room.host}님의 localhost:${page.port} 페이지가 여기 같은 주소로 포워딩됐어요.`
     noteOnce(
       $,
       'same',
-      `${opened} While you're in the room, ${portsSaid(ports)} here ${ports.length === 1 ? 'reaches' : 'reach'} ${room.host}'s, your cookies for ${them} included; Close in Room → Shown, or Leave, frees ${them}.`,
+      `${opened} 방에 있는 동안 여기 ${portsSaid(ports)} 주소는 ${room.host}님 쪽으로 연결되고, 쿠키도 함께 전달돼요. 방의 공유 목록에서 닫기나 나가기를 누르면 연결이 풀려요.`,
       s,
     )
     return
@@ -9748,12 +9747,12 @@ async function openShown($: $, shown: ShareShown, surface?: RenderSurface) {
   const room = await read($, roomA)
   if (!room) return
   const path = (await downloadShown($, room, shown.files ?? []))[0] ?? null
-  if (!path) return void $.ui.toast("Couldn't get that file")
+  if (!path) return void $.ui.toast("그 파일을 받지 못했어요")
   // A page opens in Claude's browser, where it runs (inside the project);
   // refused there (auto mode), in the Files pane as a file does.
-  if (shown.kind === 'page' && (await inPane($, `file://${path}`, 'shared pages', 'in the Files pane'))) return
+  if (shown.kind === 'page' && (await inPane($, `file://${path}`, '공유 페이지', '파일 창에서'))) return
   const result = await desk($, 'ccd_view', 'show_pane', { pane: 'file', path })
-  if (result === null) $.ui.log(`Saved to ${path}`)
+  if (result === null) $.ui.log(`${path}에 저장했습니다`)
 }
 
 // Host: the public link's HTTP. A guest's browser asked a preview for
@@ -9794,7 +9793,7 @@ async function answerProxy($: $, room: ShareRoom, ask: Record<string, unknown>) 
   proxyBusy += 1
   try {
     if (sameRoom(room, s) && (await read($, sharesA))[String(ask.port)]?.pid === pid)
-      await answerPage($, run, 503, 'The preview is busy', 'Too many requests at once. Reload in a moment.')
+      await answerPage($, run, 503, '미리보기 요청이 너무 많아요', '한꺼번에 요청이 너무 많아요. 잠시 뒤 새로고침하세요.')
   } catch {
   } finally {
     proxyBusy -= 1
@@ -9834,7 +9833,7 @@ async function proxyOnce($: $, run: ProxyRun) {
     // at the room's own deadline.
     const stopped = s.revoking.has(pid) || (await read($, shownA)).some(x => x.kind === 'preview' && x.pid === pid)
     if (stopped && !run.stopped && sameRoom(room, s) && s.mode === 'host')
-      await answerPage($, run, 404, 'This preview has ended', `${room.host} is no longer sharing it.`)
+      await answerPage($, run, 404, '이 미리보기는 끝났어요', `${room.host}님이 더 이상 공유하지 않아요.`)
     return
   }
   // Another session's preview holds the port now: its app is never fetched for this room.
@@ -9844,8 +9843,8 @@ async function proxyOnce($: $, run: ProxyRun) {
         $,
         run,
         403,
-        "This preview isn't available",
-        `localhost:${port} is another shared session's preview, forwarded to ${room.host}'s computer, so it can't be shared on.`,
+        "이 미리보기는 열 수 없어요",
+        `localhost:${port} 주소는 다른 공유 세션의 미리보기로 ${room.host}님의 컴퓨터에 포워딩된 것이라 다시 공유할 수 없어요.`,
       )
     return
   }
@@ -9906,19 +9905,19 @@ async function proxyOnce($: $, run: ProxyRun) {
   if ((await $.clock.now()) - run.at >= PROXY_ASK_MS || !(await live())) return discardFetch($, kept)
   if (exit !== '0' || !dir) {
     discardFetch($, kept)
-    if (exit === '63') return answerPage($, run, 502, 'Too large for a preview', 'This response is over 20 MB, more than a preview carries.')
-    if (exit === '28') return answerPage($, run, 504, 'The preview did not answer', `${room.host}'s app took too long to respond.`)
-    return answerPage($, run, 502, 'The preview is not reachable', `Nothing answered on ${room.host}'s localhost:${port}.`)
+    if (exit === '63') return answerPage($, run, 502, '미리보기로 보내기엔 너무 커요', '이 응답은 20MB가 넘어서 미리보기로 보낼 수 없어요.')
+    if (exit === '28') return answerPage($, run, 504, '미리보기가 응답하지 않아요', `${room.host}님의 앱이 너무 오래 응답하지 않았어요.`)
+    return answerPage($, run, 502, '미리보기에 연결할 수 없어요', `${room.host}님의 localhost:${port}에서 아무 응답이 없어요.`)
   }
   const status = Number(/^status=(\d{3})$/m.exec(out)?.[1])
   const head = proxyHead(status, /^headers=([A-Za-z0-9+/=]*)$/m.exec(out)?.[1] ?? '')
   if (out.length >= PROXY_SAID_MAX || (head !== null && head.length > PROXY_HEAD_MAX)) {
     discardFetch($, dir)
-    return answerPage($, run, 502, 'Too large for a preview', "This response's headers are over 64 KB, more than a preview carries.")
+    return answerPage($, run, 502, '미리보기로 보내기엔 너무 커요', "이 응답의 헤더가 64KB가 넘어서 미리보기로 보낼 수 없어요.")
   }
   if (head === null || !(status >= 200 && status <= 599)) {
     discardFetch($, dir)
-    return answerPage($, run, 502, 'The preview is not reachable', `Nothing answered on ${room.host}'s localhost:${port}.`)
+    return answerPage($, run, 502, '미리보기에 연결할 수 없어요', `${room.host}님의 localhost:${port}에서 아무 응답이 없어요.`)
   }
   const config = [
     roomConfig(room, `proxy/${run.id}`),
@@ -10223,7 +10222,7 @@ async function relayTcp($: $, room: ShareRoom, ask: Record<string, unknown>) {
         noteOnce(
           $,
           'tcp-node',
-          `Forwarding localhost:${port} to teammates needs Node 22.18 or later on this computer, and none was found. Install it; their next connection tries again.`,
+          `팀원에게 localhost:${port} 포트를 포워딩하려면 이 컴퓨터에 Node 22.18 이상이 필요한데 찾지 못했어요. 설치하면 팀원이 다음에 연결할 때 다시 시도해요.`,
           s,
         )
     }
@@ -10267,7 +10266,7 @@ function startedBy(text: string): string {
   const note = /<task-notification>([\s\S]*?)<\/task-notification>/.exec(text)?.[1]
   if (!note) return ''
   const summary = /<summary>([\s\S]*?)<\/summary>/.exec(note)?.[1]?.trim()
-  return `(${(summary || 'a background task finished').slice(0, 200)})`
+  return `(${(summary || '백그라운드 작업이 끝났습니다').slice(0, 200)})`
 }
 
 // How the terminal names a tool in its rows.
@@ -10318,22 +10317,21 @@ function imageCount(output: unknown): number {
 function replayLines(tool: string, input: Record<string, unknown>, out: string, errored: boolean, pictures = 0): string[] {
   const text = out.replace(/^Error: /, '').trimEnd()
   const all = text ? text.split('\n') : []
-  const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
-  if (errored) return [`Error: ${all[0] ?? 'failed'}`]
+  if (errored) return [`오류: ${all[0] ?? '실패'}`]
   // A picture the host's Claude looked at: said as the terminal says its own.
   if (pictures)
     return tool === 'Read'
-      ? [pictures === 1 ? 'Read image' : `Read ${count(pictures, 'image')}`]
-      : [...(all.length ? [all[0]!] : []), pictures === 1 ? '[Image]' : `[${count(pictures, 'image')}]`]
-  const first = (n: number) => (all.length <= n ? all : [...all.slice(0, n), `… +${count(all.length - n, 'line')}`])
+      ? [pictures === 1 ? '이미지 읽음' : `이미지 ${pictures}개 읽음`]
+      : [...(all.length ? [all[0]!] : []), pictures === 1 ? '[이미지]' : `[이미지 ${pictures}개]`]
+  const first = (n: number) => (all.length <= n ? all : [...all.slice(0, n), `… +${all.length - n}줄`])
   switch (tool) {
     case 'Read': {
       // A file read's last line can be just its number (an empty last line).
       const lines = all.length && /^\s*\d+\s*$/.test(all.at(-1) ?? '') ? all.length - 1 : all.length
-      return [`Read ${count(lines, 'line')}`]
+      return [`${lines}줄 읽음`]
     }
     case 'Write':
-      return [`Wrote ${count(String(input.content ?? '').split('\n').length, 'line')}`]
+      return [`${String(input.content ?? '').split('\n').length}줄 씀`]
     case 'Edit':
     case 'MultiEdit':
     case 'NotebookEdit': {
@@ -10344,14 +10342,14 @@ function replayLines(tool: string, input: Record<string, unknown>, out: string, 
       const file = String(input.file_path ?? input.notebook_path ?? '')
         .split('/')
         .pop()
-      const parts = [added ? count(added, 'addition') : '', removed ? count(removed, 'removal') : ''].filter(Boolean)
-      return [`Updated${file ? ` ${file}` : ''}${parts.length ? ` with ${parts.join(' and ')}` : ''}`]
+      const parts = [added ? `${added}줄 추가` : '', removed ? `${removed}줄 삭제` : ''].filter(Boolean)
+      return [`${file ? `${file} ` : ''}수정${parts.length ? `: ${parts.join(', ')}` : ''}`]
     }
     case 'Grep':
     case 'Glob':
-      return [all.length && !/^No (files|matches) found/.test(all[0] ?? '') ? `Found ${count(all.length, tool === 'Glob' ? 'file' : 'line')}` : 'Found nothing']
+      return [all.length && !/^No (files|matches) found/.test(all[0] ?? '') ? (tool === 'Glob' ? `파일 ${all.length}개 찾음` : `${all.length}줄 찾음`) : '찾은 것 없음']
     case 'Bash':
-      return all.length ? first(3) : ['(No output)']
+      return all.length ? first(3) : ['(출력 없음)']
     default:
       return all.length ? first(2) : []
   }
@@ -10362,7 +10360,7 @@ function exchanges(rows: Row[], host: string): Exchange[] {
   const out: Exchange[] = []
   for (const row of rows) {
     if (row.kind === 'user') out.push({ prompt: `${row.who ?? host}: ${row.text}`, rows: [] })
-    else if (out.length === 0) out.push({ prompt: `${host}: (earlier)`, rows: [row] })
+    else if (out.length === 0) out.push({ prompt: `${host}: (이전 내용)`, rows: [row] })
     else out.at(-1)!.rows.push(row)
   }
   return out
@@ -10530,7 +10528,7 @@ async function openRoom($: $, page?: RoomTab) {
   // screen. Desktop's side panel just comes forward. Opened before any
   // await: a press asks for it only while the press runs, and an open the
   // engine counts unasked waits undrawn below 144 columns.
-  const opened = $.ui.open({ id: ROOM, title: 'Shared session', focus: true, closeOnEscape: true, rows: 60 })
+  const opened = $.ui.open({ id: ROOM, title: '공유 세션', focus: true, closeOnEscape: true, rows: 60 })
   // On the page asked for; else, with messages waiting, on the chat.
   if (page) await update($, roomTabA, () => page)
   else if ((await read($, unreadA)) > 0) await update($, roomTabA, () => 'chat')
@@ -10605,13 +10603,12 @@ function runLine(run: { tools: string[] }): string {
   const listed = n(/^LS$/)
   const ran = n(/^Bash$/)
   const parts = [
-    searched ? `searched for ${searched} ${searched === 1 ? 'pattern' : 'patterns'}` : '',
-    read ? `read ${read} ${read === 1 ? 'file' : 'files'}` : '',
-    listed ? `listed ${listed} ${listed === 1 ? 'directory' : 'directories'}` : '',
-    ran ? `ran ${ran} shell ${ran === 1 ? 'command' : 'commands'}` : '',
+    searched ? `패턴 ${searched}개 검색` : '',
+    read ? `파일 ${read}개 읽음` : '',
+    listed ? `폴더 ${listed}개 살펴봄` : '',
+    ran ? `셸 명령 ${ran}개 실행` : '',
   ].filter(Boolean)
-  const line = parts.join(', ')
-  return line.charAt(0).toUpperCase() + line.slice(1)
+  return parts.join(', ')
 }
 
 // An earlier exchange as one response: its text, and each call a card with
@@ -10641,7 +10638,7 @@ function historyBlocks(rows: Row[]): { blocks: HistoryBlock[]; tail: string; run
       hostCalls.set(id, {
         hostId: row.id,
         seq: 0,
-        result: res ? `${res.isError ? 'Error: ' : ''}${stripLineNumbers(res.text)}` : '(no result)',
+        result: res ? `${res.isError ? 'Error: ' : ''}${stripLineNumbers(res.text)}` : '(결과 없음)',
         images: res?.images,
       })
       if (hostCalls.size > 3000) hostCalls.delete(hostCalls.keys().next().value as string)
@@ -10680,7 +10677,7 @@ function rideStep(ride: Ride, state: RideState, event: ServerEvent, host: string
   const body = event.body
   if (event.type === 'ended') {
     state.done = true
-    return `\n\n_${host} stopped sharing this session._`
+    return `\n\n_${host}님이 이 세션 공유를 끝냈습니다._`
   }
   if (event.type === 'declined' && ride.kind === 'own' && body.pid === ride.pid) {
     ownPending.delete(ride.pid)
@@ -10753,18 +10750,18 @@ function rideStep(ride: Ride, state: RideState, event: ServerEvent, host: string
     return ''
   }
   if (event.type === 'approval' && body.pending && typeof body.what === 'string') {
-    return `\n> ◷ Waiting for **${host}** to allow \`${body.what}\`\n\n`
+    return `\n> ◷ **${host}**님의 \`${body.what}\` 허용을 기다리는 중입니다\n\n`
   }
   if (event.type === 'approval' && body.pending === false && typeof body.what === 'string') {
-    return body.allowed ? `> ✓ ${host} allowed it\n\n` : `> ✕ ${host} declined it\n\n`
+    return body.allowed ? `> ✓ ${host}님이 허용했습니다\n\n` : `> ✕ ${host}님이 거절했습니다\n\n`
   }
   if (event.type === 'turn' && body.state === 'end' && body.turnId === current.turnId) {
     const mine = ride.kind === 'turn' || (ride.kind === 'own' && current.pid === ride.pid)
     state.current = null
     if (mine) state.done = true
-    if (body.reason === 'error') return `\n\n> ✕ ${host}'s Claude couldn't finish this turn (an error on ${host}'s side).\n\n`
-    if (body.reason === 'refusal') return `\n\n> ✕ ${host}'s Claude declined this request.\n\n`
-    return body.aborted ? '\n\n_(stopped)_' : mine ? '' : '\n\n'
+    if (body.reason === 'error') return `\n\n> ✕ ${host}님의 Claude가 이 답을 끝내지 못했습니다(${host}님 쪽 오류).\n\n`
+    if (body.reason === 'refusal') return `\n\n> ✕ ${host}님의 Claude가 이 요청을 거절했습니다.\n\n`
+    return body.aborted ? '\n\n_(중단됨)_' : mine ? '' : '\n\n'
   }
   return ''
 }
@@ -10811,7 +10808,7 @@ function faces(v: View, colors: Map<string, string> = roomColors(v.everyone)): F
   const seen = new Map<string, Face>()
   for (const p of v.everyone) {
     const known = seen.get(p.name)
-    const note = [p.role === 'host' ? 'host' : '', isMe(p, v.me) ? 'you' : '', p.online ? '' : 'away'].filter(Boolean).join(' · ')
+    const note = [p.role === 'host' ? '방장' : '', isMe(p, v.me) ? '나' : '', p.online ? '' : '자리 비움'].filter(Boolean).join(' · ')
     const face: Face = {
       name: p.name,
       online: p.online || Boolean(known?.online),
@@ -10825,36 +10822,36 @@ function faces(v: View, colors: Map<string, string> = roomColors(v.everyone)): F
   // The host first, then whoever is here; labels tell same-initial people apart.
   const labels = labelsFor([...seen.keys()])
   for (const face of seen.values()) face.label = labels.get(face.name)
-  return [...seen.values()].sort((a, b) => Number(b.note?.includes('host')) - Number(a.note?.includes('host')) || Number(b.online) - Number(a.online))
+  return [...seen.values()].sort((a, b) => Number(b.note?.split(' · ').includes('방장')) - Number(a.note?.split(' · ').includes('방장')) || Number(b.online) - Number(a.online))
 }
 
 function presence(v: View): string {
   const others = [...new Set(v.everyone.filter(p => p.online && p.role === 'guest' && !isMe(p, v.me)).map(p => p.name))]
   // "Sharing with Acme" already says with: the people are just here.
-  if (v.mode === 'host' && v.room?.team) return others.length ? `${listNames(others)} here` : 'no one has joined yet'
-  if (v.mode === 'host') return others.length ? `with ${listNames(others)}` : 'waiting for people to join'
+  if (v.mode === 'host' && v.room?.team) return others.length ? `${listNames(others)} 접속 중` : '아직 참여한 사람 없음'
+  if (v.mode === 'host') return others.length ? `${listNames(others)} 참여 중` : '참여를 기다리는 중'
   const hostAway = !v.everyone.some(p => p.role === 'host' && p.online)
-  return [others.length ? `with ${listNames(others)}` : '', hostAway ? `${v.room?.host} is away` : ''].filter(Boolean).join(' · ')
+  return [others.length ? `${listNames(others)} 참여 중` : '', hostAway ? `${v.room?.host}님 자리 비움` : ''].filter(Boolean).join(' · ')
 }
 
 function describe(a: ShareActivity): string {
   switch (a.kind) {
     case 'join':
-      return `${a.who} joined`
+      return `${a.who}님이 들어왔습니다`
     case 'leave':
-      return a.text === 'timeout' ? `${a.who} lost connection` : a.text === 'removed' ? `${a.who} left: no longer in the team` : `${a.who} left`
+      return a.text === 'timeout' ? `${a.who}님의 연결이 끊겼습니다` : a.text === 'removed' ? `${a.who}님이 나갔습니다: 팀에서 빠졌습니다` : `${a.who}님이 나갔습니다`
     case 'prompt':
-      return `${a.who} asked “${(a.text ?? '').replace(/\s+/g, ' ').slice(0, 70)}${(a.text ?? '').length > 70 ? '…' : ''}”`
+      return `${a.who}님이 요청했습니다: “${(a.text ?? '').replace(/\s+/g, ' ').slice(0, 70)}${(a.text ?? '').length > 70 ? '…' : ''}”`
     case 'allowed':
-      return `${a.who} allowed ${a.text ?? 'a tool call'}`
+      return `${a.who}님이 허용했습니다: ${a.text ?? '도구 실행'}`
     case 'denied':
-      return `${a.who} declined ${a.text ?? 'a tool call'}`
+      return `${a.who}님이 거절했습니다: ${a.text ?? '도구 실행'}`
     case 'stop':
-      return `${a.who} stopped the turn`
+      return `${a.who}님이 Claude 답을 멈췄습니다`
     case 'policy':
-      return `${a.who} set: ${a.text ?? ''}`
+      return `${a.who}님이 설정을 바꿨습니다: ${a.text ?? ''}`
     case 'shown':
-      return `${a.who}'s Claude showed ${a.text ?? 'something'}`
+      return `${a.who}님의 Claude가 보여 줬습니다: ${a.text ?? 'something'}`
   }
 }
 
@@ -10867,39 +10864,39 @@ function shareChoice($: $, el: UI, asking: ShareAsking, where: 'band' | 'room', 
   const keeps = kept ? ` ${keptNote(team)}` : ''
   const go = (opts: ShareOpts, surface?: RenderSurface) =>
     void inShareTurn($, () => share($, surface, opts)).catch(error => {
-      $.ui.toast("Couldn't share")
-      $.ui.log(`Couldn't share: ${String(error?.message ?? error)}`)
+      $.ui.toast("공유하지 못했어요")
+      $.ui.log(`공유하지 못했습니다: ${String(error?.message ?? error)}`)
     })
   const pick = (chosen: SharePolicy['prompts'], surface?: RenderSurface) =>
     prompts ? void update($, askingA, a => (a ? { ...a, teammates: chosen } : a)) : go({ watch: chosen === 'watch' }, surface)
-  const who = team ? `Everyone in ${team}` : 'Everyone with the link'
-  const cancel = <Button key="share-cancel" label="Cancel" plain dimColor onPress={() => void update($, askingA, () => null)} />
+  const who = team ? `${team} 팀원 모두` : '링크가 있는 모든 사람'
+  const cancel = <Button key="share-cancel" label="취소" plain dimColor onPress={() => void update($, askingA, () => null)} />
   const [what, buttons] = !teammates
     ? [
-        `${who} will see it live.${keeps} Teammates can:`,
+        `${who}에게 실시간으로 보입니다.${keeps} 팀원이 할 수 있는 일:`,
         <Box flexDirection="row" gap={1} flexShrink={0}>
-          <Button key="share-prompt" label="Prompt Claude" variant="primary" onPress={press => pick('everyone', press.surface)} />
-          <Button key="share-watch" label="Only watch and chat" onPress={press => pick('watch', press.surface)} />
+          <Button key="share-prompt" label="Claude에게 요청" variant="primary" onPress={press => pick('everyone', press.surface)} />
+          <Button key="share-watch" label="보기와 채팅만" onPress={press => pick('watch', press.surface)} />
           {cancel}
         </Box>,
       ]
     : [
-        `${who} will see its ${prompts} earlier prompt${prompts === 1 ? '' : 's'} and Claude's replies.${keeps}${teammates === 'watch' ? ' They can watch and chat, not prompt Claude.' : ''}`,
+        `${who}에게 이전 요청 ${prompts}개와 Claude의 답이 보입니다.${keeps}${teammates === 'watch' ? ' 보고 채팅할 수는 있지만 Claude에게 요청할 수는 없습니다.' : ''}`,
         <Box flexDirection="row" gap={1} flexShrink={0}>
           <Button
             key="share-all"
-            label="Share everything"
+            label="모두 공유"
             variant="primary"
             onPress={press => go({ history: true, watch: teammates === 'watch' }, press.surface)}
           />
-          <Button key="share-new" label="Only from now on" onPress={press => go({ history: false, watch: teammates === 'watch' }, press.surface)} />
+          <Button key="share-new" label="지금부터만" onPress={press => go({ history: false, watch: teammates === 'watch' }, press.surface)} />
           {cancel}
         </Box>,
       ]
   if (where === 'room') {
     return (
       <Box flexDirection="column" gap={1}>
-        <Text bold>Share this session?</Text>
+        <Text bold>이 세션을 공유할까요?</Text>
         <Text dimColor>{what}</Text>
         {buttons}
       </Box>
@@ -10910,7 +10907,7 @@ function shareChoice($: $, el: UI, asking: ShareAsking, where: 'band' | 'room', 
   return (
     <Box flexDirection="row" flexWrap="wrap" gap={2} alignItems="center" justifyContent="space-between" paddingRight={surface === 'terminal' ? 4 : 0}>
       <Box flexDirection="column" flexGrow={1} flexShrink={1} minWidth={36}>
-        <Text bold>Share this session?</Text>
+        <Text bold>이 세션을 공유할까요?</Text>
         <Text dimColor>{what}</Text>
       </Box>
       {buttons}
@@ -10923,11 +10920,11 @@ async function joinedNote($: $, joined: Awaited<ReturnType<typeof join>>): Promi
   const { room, history, fromNow } = joined
   const policy = await read($, policyA)
   return [
-    `You joined **${room.host}'s session**${room.team ? ` in ${room.team.name}` : ''}.`,
+    `**${room.host}님의 세션**${room.team ? ` in ${room.team.name}` : ''}에 참여했습니다.`,
     policy.prompts === 'watch'
-      ? `It's watch-only for now: you see every turn live and can chat with everyone in the **Room**.`
-      : `What you type here runs there, on ${room.host}'s machine, and everyone sees the replies live.`,
-    `The **Room** (above the prompt, or \`/room\`) shows who's here and has a side chat Claude doesn't read. **Leave** is up there too.${history.length ? ` What happened before you joined follows, ${history.length === 1 ? 'one prompt' : `${history.length} prompts`} with their replies.` : fromNow ? ` ${room.host} shared from that point on, so what came before isn't shown.` : ''}`,
+      ? `지금은 보기만 할 수 있습니다. 모든 답을 실시간으로 보고 **방**에서 모두와 채팅할 수 있습니다.`
+      : `여기에 입력한 내용은 ${room.host}님의 컴퓨터에서 실행되고, 모두가 답을 실시간으로 봅니다.`,
+    `**방**(요청 입력칸 위, 또는 \`/room\`)에서 누가 있는지 보고, Claude가 읽지 않는 채팅을 따로 할 수 있습니다. **나가기**도 거기 있습니다.${history.length ? ` 들어오기 전에 오간 요청 ${history.length}개와 답이 아래에 이어집니다.` : fromNow ? ` ${room.host}님이 그때부터 공유해서 그 전 내용은 보이지 않습니다.` : ''}`,
   ].join(' ')
 }
 
@@ -10937,28 +10934,28 @@ function joinFailure(error: unknown, server: string): string {
   // A team's session: who may join is the team's to say.
   if (error instanceof ApiError && typeof error.data.team === 'string' && (error.status === 401 || error.status === 403)) {
     return error.data.signIn
-      ? `This session is for **${error.data.team}**. Sign in with an account in that team in the **Team** panel (it just opened, or \`/team\`), then paste the link again.`
-      : `${error.message} Once you're in, paste the link again.`
+      ? `**${error.data.team}** 팀의 세션입니다. **팀** 패널(방금 열렸습니다, 또는 \`/team\`)에서 그 팀 계정으로 로그인한 뒤 링크를 다시 붙여 넣으세요.`
+      : `${error.message} 팀에 들어간 뒤 링크를 다시 붙여 넣으세요.`
   }
-  if (isGone(error)) return 'That shared session has ended: the host stopped sharing, or the room expired. Ask them for a new link.'
-  if (error instanceof ApiError) return `Couldn't join that shared session: ${error.message}`
+  if (isGone(error)) return '그 공유 세션은 끝났습니다. 방장이 공유를 끝냈거나 방이 만료됐습니다. 방장에게 새 링크를 요청하세요.'
+  if (error instanceof ApiError) return `공유 세션에 참여하지 못했습니다: ${error.message}`
   // Only a request that got no answer is the network; anything else says what it was.
-  if (error instanceof NetworkError) return `Couldn't reach the share server at ${server}. Check your connection, then paste the link again.`
-  return `Couldn't join that shared session: ${String((error as Error)?.message ?? error)}. Paste the link again; if it keeps happening, the update command may help: \`${UPDATE_COMMAND}\``
+  if (error instanceof NetworkError) return `공유 서버(${server})에 연결하지 못했습니다. 연결을 확인한 뒤 링크를 다시 붙여 넣으세요.`
+  return `공유 세션에 참여하지 못했습니다: ${String((error as Error)?.message ?? error)}. 링크를 다시 붙여 넣으세요. 계속 이러면 업데이트 명령이 도움이 될 수 있습니다: \`${UPDATE_COMMAND}\``
 }
 
 // What a guest may do here, in a line.
 // Who may do what in the room, as its host reads it: one sentence.
 function hostRules(policy: SharePolicy, team: string | null): string {
-  const who = team ?? 'Anyone with the link'
-  if (policy.prompts === 'watch') return `${who} can watch and chat. Only you prompt.`
+  const who = team ?? '링크가 있는 모든 사람'
+  if (policy.prompts === 'watch') return `${who}: 보기와 채팅만 할 수 있습니다. Claude에게 요청은 나만 합니다.`
   const asks =
     policy.approvals === 'none'
-      ? 'Nothing asks you first.'
+      ? '허용을 묻지 않습니다.'
       : policy.approvals === 'all'
-        ? 'Every tool asks you first.'
-        : 'Anything beyond reading the project asks you first.'
-  return `${who} can prompt Claude. ${asks}`
+        ? '모든 도구가 내 허용을 받습니다.'
+        : '프로젝트 읽기 말고는 모두 내 허용을 받습니다.'
+  return `${who}: Claude에게 요청할 수 있습니다. ${asks}`
 }
 
 // Whether a server keeps shared sessions' turns, asked once a module: the
@@ -10977,14 +10974,14 @@ function keptHere($: $, server: string): boolean | undefined {
 }
 
 function rulesLine(policy: SharePolicy, host: string): string {
-  if (policy.prompts === 'watch') return `You watch and chat. Only ${host} prompts Claude.`
+  if (policy.prompts === 'watch') return `보기와 채팅만 할 수 있습니다. Claude에게 요청은 ${host}님만 합니다.`
   const asks =
     policy.approvals === 'none'
-      ? 'Nothing asks first.'
+      ? '허용을 묻지 않습니다.'
       : policy.approvals === 'all'
-        ? `Every tool asks ${host} first.`
-        : `Anything beyond reading the project asks ${host} first.`
-  return `Everyone can prompt Claude. ${asks}`
+        ? `모든 도구가 ${host}님의 허용을 받습니다.`
+        : `프로젝트 읽기 말고는 모두 ${host}님의 허용을 받습니다.`
+  return `누구나 Claude에게 요청할 수 있습니다. ${asks}`
 }
 
 const shownGlyph = (item: ShareShown) => (item.kind === 'preview' ? '◍' : item.kind === 'widget' ? '◆' : item.kind === 'link' ? '↗' : '◧')
@@ -11008,7 +11005,7 @@ async function flashCopied($: $) {
 // A teammate's name put in the prompt box, to mention them.
 async function mention($: $, name: string) {
   const filled = await $.prompt.fill({ text: `@${name} `, mode: 'insert' }).catch(() => null)
-  if (!filled?.isFilled) $.ui.toast(`Type @${name} in your prompt to mention them`)
+  if (!filled?.isFilled) $.ui.toast(`멘션하려면 요청 입력칸에 「@${name}」을 입력하세요`)
 }
 
 // ---------------------------------------------------------------------------
@@ -11106,31 +11103,31 @@ function settingOf(el: UI, label: string, picker: RenderChildren) {
 // A moment of the host's step in words: "Writing notes.md · 4k characters".
 function doingLine(d: ShareDoing): string {
   const what = d.target || d.tool || ''
-  if (d.kind === 'thinking') return 'Thinking'
+  if (d.kind === 'thinking') return '생각 중'
   if (d.kind === 'writing') {
-    const size = d.chars && d.chars >= 1000 ? ` · ${Math.round(d.chars / 1000)}k characters` : ''
+    const size = d.chars && d.chars >= 1000 ? ` · ${Math.round(d.chars / 1000)}k자` : ''
     const verb =
       d.tool === 'Write'
-        ? 'Writing'
+        ? '쓰는 중'
         : d.tool === 'Edit' || d.tool === 'MultiEdit' || d.tool === 'NotebookEdit'
-          ? 'Editing'
+          ? '고치는 중'
           : d.tool === 'Bash'
-            ? 'Writing a command:'
-            : `Preparing ${d.tool}`
+            ? '명령 작성 중:'
+            : `${d.tool} 준비 중`
     return `${verb}${what && what !== d.tool ? ` ${what}` : ''}${size}`
   }
   const verb =
     d.tool === 'Bash'
-      ? 'Running'
+      ? '실행 중'
       : d.tool === 'Read'
-        ? 'Reading'
+        ? '읽는 중'
         : d.tool === 'Grep' || d.tool === 'Glob'
-          ? 'Searching'
+          ? '찾는 중'
           : d.tool === 'WebFetch' || d.tool === 'WebSearch'
-            ? 'Looking up'
+            ? '웹 확인 중'
             : d.tool === 'Agent' || d.tool === 'Task'
-              ? 'An agent is on'
-              : `Running ${d.tool}`
+              ? '에이전트 작업 중'
+              : `${d.tool} 실행 중`
   return `${verb}${what && what !== d.tool ? ` ${what}` : ''}`
 }
 
@@ -11143,7 +11140,7 @@ const waitingWho = (w: ShareWorking) => approvals.find(a => a.what === w.waiting
 
 function nowOf(el: UI, v: View, colors: Map<string, string>) {
   const { Text } = el
-  const host = v.room?.host ?? 'the host'
+  const host = v.room?.host ?? '방장'
   const w = v.working
   const named = (name: string) => (
     <Text bold color={colors.get(name) ?? colorFor(name)}>
@@ -11153,7 +11150,7 @@ function nowOf(el: UI, v: View, colors: Map<string, string>) {
   if (v.connection === 'reconnecting')
     return (
       <Text dimColor wrap="truncate-end">
-        what you send goes out once it's back
+        다시 연결되면 보낸 내용이 전달됩니다
       </Text>
     )
   if (w && (v.mode === 'guest' || w.byGuest)) {
@@ -11161,10 +11158,10 @@ function nowOf(el: UI, v: View, colors: Map<string, string>) {
       return v.mode === 'host' ? (
         <Text wrap="truncate-end">
           {named(waitingWho(w))}
-          <Text dimColor>{` is waiting for your OK on ${w.waitingFor}`}</Text>
+          <Text dimColor>{`님이 ${w.waitingFor} 허용을 기다립니다`}</Text>
         </Text>
       ) : (
-        <Text dimColor wrap="truncate-end">{`waiting for ${host} to allow ${w.waitingFor}`}</Text>
+        <Text dimColor wrap="truncate-end">{`${host}님의 ${w.waitingFor} 허용을 기다리는 중`}</Text>
       )
     }
     if (v.mode === 'guest' && w.doing)
@@ -11176,12 +11173,12 @@ function nowOf(el: UI, v: View, colors: Map<string, string>) {
     if (v.mode === 'guest' && w.by === myName)
       return (
         <Text color="claude" wrap="truncate-end">
-          Claude is working on your prompt
+          Claude가 내 요청을 처리하는 중
         </Text>
       )
     return (
       <Text wrap="truncate-end">
-        <Text color="claude">Claude is working for </Text>
+        <Text color="claude">Claude가 요청 처리 중: </Text>
         {named(w.by)}
       </Text>
     )
@@ -11278,9 +11275,9 @@ const linkable = (url: string) => /^https:\/\//.test(url) || /^http:\/\/localhos
 
 // Who can join a room, said plainly.
 function whoJoins(room: ShareRoom, team: ShareTeam | { access?: string } | null, watch?: boolean): string {
-  if (!room.team) return `Anyone with this link can join and ${watch ? 'watch' : 'prompt'} this session`
-  if (team?.access === 'link') return `Everyone in ${room.team.name} sees it in their Team panel, and anyone with the link can join`
-  return `Everyone in ${room.team.name} sees it in their Team panel and can join; the link works only for people in ${room.team.name}`
+  if (!room.team) return `링크가 있는 사람은 누구나 참여해서 ${watch ? '볼 수 있습니다' : 'Claude에게 요청할 수 있습니다'}`
+  if (team?.access === 'link') return `${room.team.name} 팀원 모두의 팀 패널에 보이고, 링크가 있는 사람은 누구나 참여할 수 있습니다`
+  return `${room.team.name} 팀원 모두의 팀 패널에 보이고 팀원이 참여할 수 있습니다. 링크는 ${room.team.name} 팀원만 쓸 수 있습니다`
 }
 
 // The team Share goes to now, if any.
@@ -11356,7 +11353,7 @@ async function refreshTeams($: $) {
     if (error instanceof ApiError && error.status === 401) {
       // The sign-in was ended (signed out elsewhere, the account deleted).
       await saveSignIn($, server, null)
-      await update($, teamsA, () => ({ ...NO_TEAMS, server, providers, loaded: now, error: 'Your sign-in ended. Sign in again.' }))
+      await update($, teamsA, () => ({ ...NO_TEAMS, server, providers, loaded: now, error: '로그인이 끝났어요. 다시 로그인해 주세요.' }))
       return
     }
     await update($, teamsA, t => ({
@@ -11364,7 +11361,7 @@ async function refreshTeams($: $) {
       server,
       providers,
       loaded: now,
-      error: `Couldn't reach the share server: ${String((error as Error)?.message ?? error)}`,
+      error: `공유 서버에 연결하지 못했어요: ${String((error as Error)?.message ?? error)}`,
     }))
   }
 }
@@ -11375,7 +11372,7 @@ let signInRun = 0
 // sent (its first eight hex, `XXXX-XXXX`): whoever makes a sign-in link
 // picks its hash, so the page's Continue is only for a code that matches.
 const signInCode = (login: string) => `${login.slice(0, 4)}-${login.slice(4, 8)}`.toUpperCase()
-const codeSaid = (code: string) => `Your browser will show the code ${code}: continue there only if it matches.`
+const codeSaid = (code: string) => `브라우저에 ${code} 코드가 보여요. 코드가 같을 때만 계속하세요.`
 
 // Opens the server's sign-in in the browser with the hash of a secret kept
 // here, then asks for the sign-in with that secret every 2 s for ten minutes.
@@ -11412,7 +11409,7 @@ async function startSignIn(
       signInRun++
       await saveSignIn($, server, { token: r.token, account: r.account, ...(r.joined ? { current: r.joined } : {}) })
       await update($, teamsA, x => ({ ...x, signingIn: null, invite: null }))
-      $.ui.toast(`Signed in as ${r.account.name}`)
+      $.ui.toast(`${r.account.name}님으로 로그인했어요`)
       await refreshTeams($)
       if (opts.then) await opts.then()
       return
@@ -11438,14 +11435,14 @@ async function signOut($: $, opts: { deleteAccount?: boolean } = {}) {
     await saveSignIn($, server, null)
   }
   await update($, teamsA, t => ({ ...NO_TEAMS, server, providers: t.providers }))
-  $.ui.toast(opts.deleteAccount ? 'Account deleted' : 'Signed out')
+  $.ui.toast(opts.deleteAccount ? '계정을 삭제했어요' : '로그아웃했어요')
 }
 
 // A call to the team API as the person signed in; their sign-in ending signs them out here.
 async function teamCall<T>($: $, path: string, init: { method?: string; body?: unknown } = {}): Promise<T> {
   const server = await serverOf($)
   const saved = await signInFor($, server)
-  if (!saved) throw new ApiError('Sign in first: /team', 401)
+  if (!saved) throw new ApiError('먼저 로그인해 주세요: /team', 401)
   try {
     return await api<T>($, server, path, { ...init, token: saved.token })
   } catch (error) {
@@ -11468,7 +11465,7 @@ async function createTeam($: $, name: string): Promise<ShareTeam | null> {
   if (!trimmed) return null
   const { team } = await teamCall<{ team: ShareTeam }>($, '/api/teams', { method: 'POST', body: { name: trimmed } })
   await setCurrentTeam($, team.id)
-  $.ui.toast(`Made ${team.name}. Copy its invite link for your teammates`)
+  $.ui.toast(`${team.name} 팀을 만들었어요. 팀원에게 보낼 초대 링크를 복사하세요`)
   return team
 }
 
@@ -11484,7 +11481,7 @@ async function newInvite($: $) {
   if (!t.current) return
   await teamCall($, `/api/teams/${t.current}/invite`, { method: 'POST' })
   await refreshTeams($)
-  $.ui.toast('New invite link. The old one no longer works')
+  $.ui.toast('새 초대 링크를 만들었어요. 이전 링크는 이제 쓸 수 없어요')
 }
 
 async function leaveTeam($: $) {
@@ -11496,7 +11493,7 @@ async function leaveTeam($: $) {
   const saved = await signInFor($, server)
   if (saved) await saveSignIn($, server, { ...saved, current: undefined })
   await refreshTeams($)
-  $.ui.toast(`Left ${team.name}`)
+  $.ui.toast(`${team.name} 팀에서 나왔어요`)
 }
 
 const inviteUrl = (t: ShareTeams, team: ShareTeam) => `${t.server}/i/${team.invite}`
@@ -11509,7 +11506,7 @@ async function openTeam($: $, page?: 'live' | 'people' | 'settings') {
   teamOpen = true
   // Opened before any await, as the Room is (openRoom). A session with no
   // panels (a headless run) still answers in words.
-  const opened = $.ui.open({ id: TEAM, title: 'Team', focus: true, closeOnEscape: true, rows: 60 }).catch(() => {})
+  const opened = $.ui.open({ id: TEAM, title: '팀', focus: true, closeOnEscape: true, rows: 60 }).catch(() => {})
   if (page) await update($, teamTabA, () => page)
   await opened
   void refreshTeams($).catch(() => {})
@@ -11574,8 +11571,8 @@ async function openHeld($: $, hold: LiveHold): Promise<boolean> {
 function alreadyIn(hold: LiveHold, opened: boolean): string {
   const where =
     hold.mode === 'host'
-      ? "That's your own shared session, open in another Claude Code session"
-      : `You're already in ${hold.host}'s session, in another Claude Code session`
+      ? "내 공유 세션이 다른 Claude Code 세션에서 열려 있어요"
+      : `이미 다른 Claude Code 세션에서 ${hold.host}님의 세션에 참여 중이에요`
   return `${where}${opened ? ': it just opened' : ` (“${tidyTitle(hold.title)}”)`}.`
 }
 
@@ -11613,7 +11610,7 @@ async function joinFromTeam($: $, sessions: ShareTeamSession[], surface?: Render
     copyText(
       $,
       list.map(s => `claude ${sq(s.url)}`).join('\n'),
-      list.length === 1 ? 'Command copied: run it in a new terminal to join' : `${list.length} commands copied: run each in its own terminal`,
+      list.length === 1 ? '명령을 복사했어요: 새 터미널에서 실행하면 참여해요' : `명령 ${list.length}개를 복사했어요: 각각 다른 터미널에서 실행하세요`,
       surface,
     )
   if (fresh) {
@@ -11625,8 +11622,8 @@ async function joinFromTeam($: $, sessions: ShareTeamSession[], surface?: Render
   if (desktop && (await openExternal($, deepLink(first.url)))) {
     $.ui.toast(
       rest.length
-        ? `Opened ${first.host}'s session: press Enter there to join. The other ${rest.length} open one after another as each joins`
-        : `Opened ${first.host}'s session: press Enter there to join`,
+        ? `${first.host}님의 세션을 열었어요: 그 세션에서 Enter를 누르면 참여해요. 나머지 ${rest.length}개는 하나씩 참여할 때마다 차례로 열려요`
+        : `${first.host}님 세션을 열었어요. 거기서 Enter를 누르면 참여해요`,
     )
     return
   }
@@ -11654,17 +11651,17 @@ async function stopFromTeam($: $, roomId: string) {
   if (!(await pressedTwice($, `stop:${roomId}`))) return
   const server = await serverOf($)
   const saved = await signInFor($, server)
-  if (!saved) return void $.ui.toast('Sign in first: /team')
+  if (!saved) return void $.ui.toast('먼저 로그인해 주세요: /team')
   let over = true
   try {
     await api($, server, `/api/rooms/${roomId}/end`, { method: 'POST', account: saved.token })
-    $.ui.toast('Stopped sharing. The link no longer works.')
+    $.ui.toast('공유를 끝냈어요. 이제 링크로 들어올 수 없어요.')
   } catch (error) {
     // Already over: it only had to leave the list.
     if (!(error instanceof ApiError && (error.status === 404 || error.status === 410))) {
       over = false
-      $.ui.toast("Couldn't stop it")
-      $.ui.log(`Couldn't stop sharing: ${error instanceof Error ? error.message : String(error)}`)
+      $.ui.toast("공유를 끝내지 못했어요")
+      $.ui.log(`공유를 끝내지 못했습니다: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   // Off the list at once, not after the panel's refresh comes back.
@@ -11679,14 +11676,14 @@ async function leaveFromTeam($: $, roomId: string) {
   if (!(await pressedTwice($, `leave:${roomId}`))) return
   const server = await serverOf($)
   const saved = await signInFor($, server)
-  if (!saved) return void $.ui.toast('Sign in first: /team')
+  if (!saved) return void $.ui.toast('먼저 로그인해 주세요: /team')
   try {
     await api($, server, `/api/rooms/${roomId}/leave`, { method: 'POST', account: saved.token })
-    $.ui.toast('You left that session.')
+    $.ui.toast('그 세션에서 나왔어요.')
   } catch (error) {
     if (!(error instanceof ApiError && (error.status === 404 || error.status === 410))) {
-      $.ui.toast("Couldn't leave it")
-      $.ui.log(`Couldn't leave: ${error instanceof Error ? error.message : String(error)}`)
+      $.ui.toast("나가지 못했어요")
+      $.ui.log(`나가지 못했습니다: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   await refreshTeams($)
@@ -11707,7 +11704,7 @@ async function pressedTwice($: $, key: string): Promise<boolean> {
 // The Team panel's Open: the session here that's in that room.
 async function openHere($: $, roomId: string) {
   const hold = await heldElsewhere($, roomId)
-  if (!hold) return void $.ui.toast('That session has closed')
+  if (!hold) return void $.ui.toast('그 세션은 끝났어요')
   if (!(await openHeld($, hold))) $.ui.toast(alreadyIn(hold, false))
 }
 
@@ -11719,13 +11716,13 @@ async function joinHere($: $, url: string) {
   try {
     const joined = await join($, link[1], link[2])
     laterRides.unshift({
-      text: `Join ${joined.room.host}'s session`,
+      text: `${joined.room.host}님의 세션에 참여하기`,
       ride: { kind: 'note', text: await joinedNote($, joined), then: joined.history, open: joined.open },
     })
     scheduleRides($)
     void continueJoins($, joined.room.id).catch(() => {})
   } catch (error) {
-    $.ui.toast("Couldn't join")
+    $.ui.toast("참여하지 못했어요")
     $.ui.log(joinFailure(error, link[1]).replace(/\*\*/g, ''))
   }
 }
@@ -11743,15 +11740,15 @@ async function takeInvite($: $, server: string, code: string): Promise<string> {
       const r = await api<{ team: ShareTeam; joined: boolean }>($, server, `/api/invites/${code}`, { method: 'POST', token: saved.token })
       await saveSignIn($, server, { ...saved, current: r.team.id })
       await openTeam($)
-      return `${r.joined ? "You're in" : "You're already in"} **${r.team.name}**. The **Team** panel (it just opened, or \`/team\`) lists the sessions its people share; press **Join** on one. What you share now goes to ${r.team.name}.`
+      return `${r.joined ? '' : '이미 '}**${r.team.name}**에 들어왔습니다. 팀원이 공유하는 세션은 **팀** 패널(방금 열렸습니다. \`/team\`으로도 열 수 있습니다)에 나옵니다. 하나 골라 **참여하기**를 누르세요. 이제 공유하는 세션은 ${r.team.name}에 보입니다.`
     } catch (error) {
-      if (!(error instanceof ApiError && error.status === 401)) return `Couldn't use that invite: ${String((error as Error)?.message ?? error)}`
+      if (!(error instanceof ApiError && error.status === 401)) return `초대 링크를 쓰지 못했습니다: ${String((error as Error)?.message ?? error)}`
       await saveSignIn($, server, null)
     }
   }
   await update($, teamsA, t => ({ ...t, invite: { server, code } }))
   await openTeam($)
-  return "To join this team, sign in with GitHub or Google in the **Team** panel (it just opened, or `/team`). You join the team as soon as you're signed in."
+  return "이 팀에 참여하려면 **팀** 패널(방금 열렸습니다. `/team`으로도 열 수 있습니다)에서 GitHub 또는 Google 계정으로 로그인하세요. 로그인하면 바로 팀에 참여합니다."
 }
 
 // Host: who an open room is shared with, a team or the link alone. Everyone already in stays.
@@ -11767,10 +11764,10 @@ async function setRoomTeam($: $, teamId: string | null) {
       body: { team: teamId },
     })
     await update($, roomA, rm => (rm ? { ...rm, team: r.team } : rm))
-    $.ui.toast(r.team ? `Shared with ${r.team.name}` : 'Shared by link alone now')
+    $.ui.toast(r.team ? `이제 ${r.team.name}에 공유해요` : '이제 링크로만 공유해요')
     void refreshTeams($).catch(() => {})
   } catch (error) {
-    $.ui.toast(`Couldn't change it: ${String((error as Error)?.message ?? error)}`)
+    $.ui.toast(`바꾸지 못했어요: ${String((error as Error)?.message ?? error)}`)
   }
 }
 
@@ -11787,118 +11784,118 @@ async function teamCommand($: $, args: string): Promise<{ text: string }> {
     switch (verb.toLowerCase()) {
       case '':
         await openTeam($)
-        return { text: 'Opened the Team panel.' }
+        return { text: '팀 패널을 열었습니다.' }
       case 'signin':
       case 'login': {
         await refreshTeams($)
         const t = await read($, teamsA)
-        if (t.account) return { text: `Signed in as ${t.account.name}. /team signout to sign out.` }
+        if (t.account) return { text: `${t.account.name}님으로 로그인되어 있습니다. 로그아웃하려면 /team signout을 입력하세요.` }
         const provider = arg.toLowerCase() || (t.providers.length === 1 ? t.providers[0]?.id : '')
         if (!provider || !t.providers.some(p => p.id === provider)) {
           return {
             text: t.providers.length
-              ? `Sign in with: ${t.providers.map(p => `/team signin ${p.id}`).join(' or ')}`
-              : "This share server doesn't offer sign-in.",
+              ? `로그인 방법: ${t.providers.map(p => `/team signin ${p.id}`).join(' 또는 ')}`
+              : "이 공유 서버는 로그인을 지원하지 않습니다.",
           }
         }
         const { url, code } = await startSignIn($, provider, { said: true })
         return {
-          text: `Sign in with ${t.providers.find(p => p.id === provider)?.label ?? provider} in your browser; this session picks it up when you're done. ${codeSaid(code)} If no browser opened: ${url}`,
+          text: `브라우저에서 ${t.providers.find(p => p.id === provider)?.label ?? provider} 로그인을 마치세요. 끝나면 이 세션이 알아서 이어받습니다. ${codeSaid(code)} 브라우저가 열리지 않았다면: ${url}`,
         }
       }
       case 'signout':
       case 'logout':
         await signOut($)
-        return { text: 'Signed out.' }
+        return { text: '로그아웃했습니다.' }
       case 'delete-account':
         await signOut($, { deleteAccount: true })
-        return { text: 'Deleted your account on the share server: your sign-in, and your place in every team.' }
+        return { text: '공유 서버의 계정을 삭제했습니다. 로그인 정보와 모든 팀 참여 기록도 함께 지웠습니다.' }
       case 'create': {
         const team = await createTeam($, arg)
-        if (!team) return { text: 'Name it: /team create <name>' }
-        return { text: `Made ${team.name}; what you share goes to it. Invite people with this link: ${(await read($, teamsA)).server}/i/${team.invite}` }
+        if (!team) return { text: '팀 이름을 붙여 주세요: /team create <name>' }
+        return { text: `${team.name} 팀을 만들었습니다. 이제 공유하는 세션은 이 팀에 보입니다. 이 링크로 사람들을 초대하세요: ${(await read($, teamsA)).server}/i/${team.invite}` }
       }
       case 'invite': {
         const team = t0.teams.find(x => x.id === t0.current)
-        if (!team) return { text: 'No team yet: /team create <name>' }
-        await copyText($, inviteUrl(t0, team), 'Invite link copied')
-        return { text: `Anyone who opens this link (and signs in) joins ${team.name}: ${inviteUrl(t0, team)}` }
+        if (!team) return { text: '아직 팀이 없습니다: /team create <name>' }
+        await copyText($, inviteUrl(t0, team), '초대 링크를 복사했어요')
+        return { text: `이 링크를 열고 로그인하면 누구나 ${team.name}에 참여합니다: ${inviteUrl(t0, team)}` }
       }
       case 'sessions':
       case 'list': {
         await refreshTeams($)
         const t = await read($, teamsA)
         const team = t.teams.find(x => x.id === t.current)
-        if (!t.account) return { text: 'Sign in first: /team signin' }
-        if (!team) return { text: 'No team yet: /team create <name>, or paste an invite link.' }
-        if (!t.sessions.length) return { text: `Nothing is shared with ${team.name} right now.` }
+        if (!t.account) return { text: '먼저 로그인하세요: /team signin' }
+        if (!team) return { text: '아직 팀이 없습니다. /team create <name>으로 만들거나 초대 링크를 붙여 넣으세요.' }
+        if (!t.sessions.length) return { text: `지금 ${team.name}에 공유된 세션이 없습니다.` }
         return {
           text: [
-            `Shared with ${team.name}:`,
-            ...t.sessions.map((s, i) => `${i + 1}. ${s.title} (${s.host}${s.hostOnline ? '' : ', away'}): ${s.url}`),
+            `${team.name}에 공유된 세션:`,
+            ...t.sessions.map((s, i) => `${i + 1}. ${s.title} (${s.host}님${s.hostOnline ? '' : ', 자리 비움'}): ${s.url}`),
             '',
-            'Paste a link to join, or /team join all.',
+            '링크를 붙여 넣어 참여하거나 /team join all을 입력하세요.',
           ].join('\n'),
         }
       }
       case 'invites': {
         const server = await serverOf($)
         const saved = await signInFor($, server)
-        if (!saved) return { text: 'Sign in first: /team signin' }
+        if (!saved) return { text: '먼저 로그인하세요: /team signin' }
         const list = (await api<{ invites: ShareInvite[] }>($, server, '/api/me/invites', { token: saved.token })).invites
         await update($, invitesA, () => list)
-        if (!list.length) return { text: 'No invites right now.' }
+        if (!list.length) return { text: '지금 받은 초대가 없습니다.' }
         return {
-          text: ['Invited:', ...list.map((i, n) => `${n + 1}. ${i.room.title} (from ${i.from.name}): ${i.room.url}`), '', 'Paste a link to join.'].join('\n'),
+          text: ['받은 초대:', ...list.map((i, n) => `${n + 1}. ${i.room.title} (${i.from.name}님이 초대): ${i.room.url}`), '', '링크를 붙여 넣으면 참여합니다.'].join('\n'),
         }
       }
       case 'join': {
         await refreshTeams($)
         const t = await read($, teamsA)
         const pick = arg.toLowerCase() === 'all' ? t.sessions : t.sessions.filter((_, i) => String(i + 1) === arg)
-        if (!pick.length) return { text: 'Which? /team join <number from /team sessions>, or /team join all' }
+        if (!pick.length) return { text: '어느 세션에 참여할까요? /team join <번호>(/team sessions 목록의 번호) 또는 /team join all' }
         await joinFromTeam($, pick)
-        return { text: `Joining ${pick.length === 1 ? pick[0]?.title : `${pick.length} sessions`}.` }
+        return { text: `참여하는 중: ${pick.length === 1 ? pick[0]?.title : `세션 ${pick.length}개`}` }
       }
       case 'use': {
         await refreshTeams($)
         const t = await read($, teamsA)
         if (arg.toLowerCase() === 'link') {
           await setCurrentTeam($, null)
-          return { text: 'Share now goes by link alone.' }
+          return { text: '이제 링크로만 공유합니다.' }
         }
         const team = t.teams.find(x => x.name.toLowerCase() === arg.toLowerCase() || x.id === arg)
         if (!team) return { text: `Your teams: ${t.teams.map(x => x.name).join(', ') || 'none'}. /team use <name> or /team use link` }
         await setCurrentTeam($, team.id)
-        return { text: `Share now goes to ${team.name}.` }
+        return { text: `이제 ${team.name}에 공유합니다.` }
       }
       case 'access': {
         const access = arg.toLowerCase()
         if (access !== 'members' && access !== 'link')
           return { text: '/team access members (only people in the team join its sessions) or /team access link (anyone with a link)' }
         await changeTeam($, { access })
-        return { text: access === 'members' ? 'Only people in the team join its sessions now.' : "Anyone with a link joins the team's sessions now." }
+        return { text: access === 'members' ? '이제 팀에 속한 사람만 팀 세션에 참여할 수 있습니다.' : "이제 링크가 있으면 누구나 팀 세션에 참여할 수 있습니다." }
       }
       case 'domains':
         await changeTeam($, { domains: arg })
-        return { text: arg ? `People who sign in with a verified email at ${arg} join by themselves.` : 'No email domain joins by itself now.' }
+        return { text: arg ? `${arg} 도메인의 인증된 이메일로 로그인한 사람은 자동으로 팀에 참여합니다.` : '이제 자동으로 팀에 참여하는 이메일 도메인이 없습니다.' }
       case 'orgs':
         await changeTeam($, { githubOrgs: arg })
         return {
           text: arg
-            ? `People in the GitHub organization${rest.length > 1 ? 's' : ''} ${arg} join by themselves when they sign in with GitHub.`
-            : 'No GitHub organization joins by itself now.',
+            ? `GitHub 조직 ${arg}에 속한 사람은 GitHub 계정으로 로그인하면 자동으로 팀에 참여합니다.`
+            : '이제 자동으로 팀에 참여하는 GitHub 조직이 없습니다.',
         }
       case 'leave':
         await leaveTeam($)
-        return { text: 'Left the team.' }
+        return { text: '팀에서 나갔습니다.' }
       default:
         return {
           text: '/team opens the Team panel. Also: /team signin [github|google], /team create <name>, /team invite, /team invites, /team sessions, /team join <n|all>, /team use <name|link>, /team access members|link, /team domains <a.com …>, /team orgs <org …>, /team leave, /team signout, /team delete-account',
         }
     }
   } catch (error) {
-    return { text: `Couldn't: ${String((error as Error)?.message ?? error)}` }
+    return { text: `실패했습니다: ${String((error as Error)?.message ?? error)}` }
   }
 }
 
@@ -11976,15 +11973,15 @@ async function pollInvites($: $) {
   // In a room, this session's row is the room's: a new invite says so once,
   // and waits as a button in the row.
   const fresh = list.find(i => !had.some(h => inviteKey(h) === inviteKey(i))) // a new one, or one sent again
-  if (fresh && (await read($, modeA)) !== 'idle') $.ui.toast(`${fresh.from.name} invites you to ${tidyTitle(fresh.room.title)}`)
+  if (fresh && (await read($, modeA)) !== 'idle') $.ui.toast(`${fresh.from.name}님이 ${tidyTitle(fresh.room.title)}에 초대했어요`)
 }
 
 // A desktop notification for an invite: the terminal's own channel where
 // there is one (iTerm2, kitty, Ghostty); else (Claude Desktop, other
 // terminals) the system's: macOS's notification centre, or notify-send.
 async function notifyInvite($: $, invite: ShareInvite) {
-  const title = `${invite.from.name} invites you`
-  const body = `${invite.room.title} · Join it from Claude Code, above the prompt`
+  const title = `${invite.from.name}님이 초대했어요`
+  const body = `${invite.room.title} · Claude Code 입력창 위에서 참여할 수 있어요`
   const test = (await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1'
   // 데스크톱은 이 컴퓨터의 알림이 먼저(11/27): $.ui.notify 는 「보냄」이라 답해도 Claude 앱 알림이
   // 꺼져 있으면 아무것도 안 뜬다(멘션 알림과 같은 까닭). 누르면 이 세션이 열려 위 줄의 Join 이 보인다.
@@ -12024,9 +12021,9 @@ async function joinInvited($: $, invite: ShareInvite, surface?: RenderSurface) {
 // Host: invite teammates (account ids) to this session.
 async function inviteToRoom($: $, ids: string[]): Promise<string> {
   const room = await read($, roomA)
-  if (!room || (await read($, modeA)) !== 'host') return 'Share this session first: press Share or type /share-session.'
+  if (!room || (await read($, modeA)) !== 'host') return '먼저 이 세션을 공유하세요. 공유하기를 누르거나 /share-session을 입력하면 됩니다.'
   const saved = await signInFor($, room.server)
-  if (!saved) return 'Sign in first to invite teammates: press Team above the prompt, or /team signin.'
+  if (!saved) return '팀원을 초대하려면 먼저 로그인하세요. 입력창 위의 팀을 누르거나 /team signin을 입력하면 됩니다.'
   const r = await api<{ invited: string[]; refused: string[] }>($, room.server, `/api/rooms/${room.id}/invite`, {
     method: 'POST',
     token: room.token,
@@ -12036,8 +12033,8 @@ async function inviteToRoom($: $, ids: string[]): Promise<string> {
   const now = await $.clock.now()
   await update($, invitedA, m => ({ ...m, ...Object.fromEntries(ids.filter(id => !r.refused.includes(id)).map(id => [id, now])) }))
   return r.invited.length
-    ? `Invited ${listNames(r.invited)}: it shows in their Claude Code within a minute.`
-    : "Couldn't invite them: you can invite people who share a team with you."
+    ? `${listNames(r.invited)}에게 초대를 보냈습니다. 1분 안에 상대의 Claude Code에 나타납니다.`
+    : "초대하지 못했습니다. 같은 팀에 있는 사람만 초대할 수 있습니다."
 }
 
 // /invite <name>: by name or GitHub login, a teammate's or several.
@@ -12045,7 +12042,7 @@ async function inviteCommand($: $, args: string): Promise<{ text: string }> {
   try {
     await refreshTeams($)
     const t = await read($, teamsA)
-    if (!t.account) return { text: 'Sign in first to invite teammates: press Team above the prompt, or /team signin.' }
+    if (!t.account) return { text: '팀원을 초대하려면 먼저 로그인하세요. 입력창 위의 팀을 누르거나 /team signin을 입력하면 됩니다.' }
     const mates = t.teammates ?? []
     const wanted = args
       .split(/[,\s]+/)
@@ -12054,8 +12051,8 @@ async function inviteCommand($: $, args: string): Promise<{ text: string }> {
     if (!wanted.length)
       return {
         text: mates.length
-          ? `Invite whom? ${mates.map(m => m.name).join(', ')}. /invite <name>`
-          : 'No teammates to invite yet: make a team in /team and send its invite link.',
+          ? `누구를 초대할까요? ${mates.map(m => m.name).join(', ')}. /invite <name>`
+          : '아직 초대할 팀원이 없습니다. /team에서 팀을 만들고 초대 링크를 보내세요.',
       }
     const picks = wanted.map(
       w =>
@@ -12066,7 +12063,7 @@ async function inviteCommand($: $, args: string): Promise<{ text: string }> {
     if (missing.length) return { text: `No teammate called ${missing.join(', ')}. You can invite: ${mates.map(m => m.name).join(', ') || 'nobody yet'}.` }
     return { text: await inviteToRoom($, [...new Set(picks.map(m => m!.id))]) }
   } catch (error) {
-    return { text: `Couldn't invite: ${String((error as Error)?.message ?? error)}` }
+    return { text: `초대하지 못했습니다: ${String((error as Error)?.message ?? error)}` }
   }
 }
 
@@ -12115,14 +12112,14 @@ async function signedOutShare($: $, choice: string, byLink: boolean, watch: bool
   const chosen = provider || (providers.length === 1 ? (providers[0]?.id ?? '') : '')
   if (keep !== 'signin' || !providers.some(p => p.id === chosen)) {
     const signIns = providers.length
-      ? providers.map(p => `- \`/share-session${rest} signin ${p.id}\` signs in with ${p.label}, then shares`)
-      : ['- this server offers no sign-in']
+      ? providers.map(p => `- \`/share-session${rest} signin ${p.id}\`: ${p.label} 로그인 후 공유합니다`)
+      : ['- 이 서버는 로그인을 지원하지 않습니다']
     return {
       text: [
-        `${server} keeps shared sessions' turns for search, but only a signed-in host's: you'd read them back later with the same sign-in. You aren't signed in there.`,
+        `${server} 서버는 공유 세션의 대화를 검색용으로 보관하지만, 로그인한 방장의 것만 보관합니다. 나중에 같은 계정으로 로그인하면 다시 읽을 수 있습니다. 지금은 이 서버에 로그인하지 않은 상태입니다.`,
         '',
         ...signIns,
-        `- \`/share-session${rest} unkept\` shares without keeping its turns`,
+        `- \`/share-session${rest} unkept\`: 대화를 보관하지 않고 공유합니다`,
       ].join('\n'),
     }
   }
@@ -12135,7 +12132,7 @@ async function signedOutShare($: $, choice: string, byLink: boolean, watch: bool
     },
   })
   return {
-    text: `Sign in with ${providers.find(p => p.id === chosen)?.label ?? chosen} in your browser; this session shares once you're done. ${codeSaid(code)} If no browser opened: ${url}`,
+    text: `브라우저에서 ${providers.find(p => p.id === chosen)?.label ?? chosen} 로그인을 마치세요. 끝나면 이 세션을 공유합니다. ${codeSaid(code)} 브라우저가 열리지 않았다면: ${url}`,
   }
 }
 
@@ -12160,10 +12157,10 @@ async function shareAsked($: $, choice: string, byLink: boolean, watch: boolean,
         const rest = `${byLink ? ' link' : ''}${watch ? ' watch' : ''}`
         return {
           text: [
-            `This session has ${prompts} earlier prompt${prompts === 1 ? '' : 's'}. ${team ? `Everyone in ${team}` : 'Everyone with the link'} would see them, and Claude's replies.${kept ? ` ${keptNote(team)}` : ''}`,
+            `이 세션에는 이전 요청이 ${prompts}개 있습니다. ${team ? `${team} 팀 전원` : '링크가 있는 모든 사람'}이 그 요청과 Claude의 답을 보게 됩니다.${kept ? ` ${keptNote(team)}` : ''}`,
             '',
-            `- \`/share-session all${rest}\` shares the session as it is`,
-            `- \`/share-session new${rest}\` shares only what happens from now on`,
+            `- \`/share-session all${rest}\`: 지금까지의 내용을 포함해 공유합니다`,
+            `- \`/share-session new${rest}\`: 지금부터 일어나는 일만 공유합니다`,
           ].join('\n'),
         }
       }
@@ -12172,10 +12169,10 @@ async function shareAsked($: $, choice: string, byLink: boolean, watch: boolean,
     const team = room.team ? ((await read($, teamsA)).teams.find(t => t.id === room.team?.id) ?? null) : null
     const kept = (await serverKeeps($)) ? ` ${keptNote(room.team?.name ?? null)}` : ''
     return {
-      text: `Sharing this session${choice === 'new' ? ' from now on' : ''}${room.team ? ` with ${room.team.name}` : ''}${watch ? ', watch-only: teammates watch and chat, and only you prompt Claude' : ''}. ${whoJoins(room, team, watch)}: ${room.url}${kept}`,
+      text: `이 세션을${choice === 'new' ? ' 지금부터' : ''}${room.team ? ` ${room.team.name}에` : ''} 공유합니다${watch ? '. 보기만: 팀원은 보고 채팅만 하고, Claude에게 요청할 수 있는 사람은 나뿐입니다' : ''}. ${whoJoins(room, team, watch)}: ${room.url}${kept}`,
     }
   } catch (error) {
-    return { text: `Couldn't share: ${String((error as Error)?.message ?? error)}` }
+    return { text: `공유하지 못했습니다: ${String((error as Error)?.message ?? error)}` }
   }
 }
 
@@ -12205,18 +12202,18 @@ export const register: Register = (on, options) => {
     // Not /share: Claude has its own. Every name here is the plugin's alone.
     await $.command.register({
       name: 'share-session',
-      description: 'Share this session (with your team when signed in): /share-session [all | new] [link] [watch]',
+      description: '이 세션 공유(로그인하면 팀과 공유): /share-session [all | new] [link] [watch]',
     })
-    await $.command.register({ name: 'team', description: "Your team's shared sessions, one click to join: /team [signin | create <name> | invite | signout]" })
-    await $.command.register({ name: 'invite', description: 'Invite a teammate into this shared session, in their Claude Code: /invite <name>' })
-    await $.command.register({ name: 'stop-sharing', description: 'Stop sharing this session, or leave the one you joined' })
-    await $.command.register({ name: 'room', description: 'Open the Room: who is here, activity, side chat' })
-    await $.command.register({ name: 'share-file', description: 'Show a file to everyone in the shared session: /share-file <path>' })
+    await $.command.register({ name: 'team', description: "팀이 공유한 세션 목록, 눌러서 바로 참여: /team [signin | create <name> | invite | signout]" })
+    await $.command.register({ name: 'invite', description: '이 공유 세션에 팀원 초대(상대의 Claude Code로): /invite <name>' })
+    await $.command.register({ name: 'stop-sharing', description: '이 세션 공유 끝내기, 또는 참여한 세션에서 나가기' })
+    await $.command.register({ name: 'room', description: '방 열기: 접속한 사람, 활동, 채팅' })
+    await $.command.register({ name: 'share-file', description: '공유 세션의 모든 사람에게 파일 보여 주기: /share-file <path>' })
     await $.command.register({
       name: 'share-preview',
-      description: "Let teammates open this machine's localhost: /share-preview <port|http://localhost:port/path> [title]",
+      description: "이 컴퓨터의 localhost를 팀원에게 열기: /share-preview <port|http://localhost:port/path> [title]",
     })
-    await $.command.register({ name: 'who', description: "Who's in this shared session and what each is doing" })
+    await $.command.register({ name: 'who', description: "이 공유 세션에 누가 있고 각자 무엇을 하는지" })
     void readUpdates($)
     // Signed in: the team and what's shared with it, for Share and the Team button.
     void serverOf($)
@@ -12273,8 +12270,8 @@ export const register: Register = (on, options) => {
     }
     const reloaded = room && (await read($, modeA)) === 'guest'
     if (reloaded) await readyReplay($)
-    if (!room) await resumeHosting($).catch(error => $.ui.log(`Couldn't pick the shared session back up: ${String(error?.message ?? error)}`))
-    if (!(await read($, roomA))) await resumeJoined($).catch(error => $.ui.log(`Couldn't get back into the shared session: ${String(error?.message ?? error)}`))
+    if (!room) await resumeHosting($).catch(error => $.ui.log(`공유 세션을 다시 잇지 못했습니다: ${String(error?.message ?? error)}`))
+    if (!(await read($, roomA))) await resumeJoined($).catch(error => $.ui.log(`공유 세션에 다시 들어가지 못했습니다: ${String(error?.message ?? error)}`))
     // A room that doesn't answer holds a reload's listeners back only so long.
     void (async () => {
       if (reloaded) await Promise.race([listed, new Promise<void>(done => $.clock.after(3_000, done))])
@@ -12329,22 +12326,22 @@ export const register: Register = (on, options) => {
   on('command.run', { command: 'shared-session:team' }, ($, e) => teamCommand($, e.args ?? ''))
 
   on('command.run', { command: 'room' }, async $ => {
-    if ((await read($, modeA)) === 'idle') return { text: 'This session is not shared. Press Share above the prompt, or type /share-session.' }
+    if ((await read($, modeA)) === 'idle') return { text: '이 세션은 공유 중이 아닙니다. 입력창 위의 공유하기를 누르거나 /share-session을 입력하세요.' }
     await openRoom($)
-    return { text: 'Opened the Room.' }
+    return { text: '방을 열었습니다.' }
   })
 
   // Who's here, as words the model can read too; the transcript draws it as a
   // card (the CommandOutput hook below).
   on('command.run', { command: 'who' }, async $ => {
     const v = await view($)
-    if (v.mode === 'idle' || !v.room) return { text: 'This session is not shared. Press Share above the prompt, or type /share-session.' }
+    if (v.mode === 'idle' || !v.room) return { text: '이 세션은 공유 중이 아닙니다. 입력창 위의 공유하기를 누르거나 /share-session을 입력하세요.' }
     const people = faces(v)
     const here = people.filter(p => p.online).map(p => p.name)
     const away = people.filter(p => !p.online).map(p => p.name)
     const w = v.working
     return {
-      text: `${v.mode === 'host' ? 'Sharing this session' : `In ${v.room.host}'s session`}: ${listNames(here)} here${away.length ? `; ${listNames(away)} away` : ''}.${w ? ` Claude is working for ${w.by}.` : ''}`,
+      text: `${v.mode === 'host' ? '이 세션을 공유 중' : `${v.room.host}님 세션에 참여 중`}: 접속 중 ${listNames(here)}${away.length ? `; 자리 비움 ${listNames(away)}` : ''}.${w ? ` Claude가 ${w.by}님 요청을 처리하는 중입니다.` : ''}`,
     }
   })
 
@@ -12363,32 +12360,32 @@ export const register: Register = (on, options) => {
 
   on('command.run', { command: 'share-file' }, async ($, e) => {
     const room = await read($, roomA)
-    if ((await read($, modeA)) !== 'host' || !room) return { text: 'Share this session first: press Share or type /share-session.' }
+    if ((await read($, modeA)) !== 'host' || !room) return { text: '먼저 이 세션을 공유하세요. 공유하기를 누르거나 /share-session을 입력하면 됩니다.' }
     const arg = e.args.trim().replace(/^["']|["']$/g, '')
-    if (!arg) return { text: 'Which file? /share-file <path>' }
+    if (!arg) return { text: '어떤 파일인가요? /share-file <path>' }
     const cwd = await $.session.cwd()
     const path = arg.startsWith('/') ? arg : `${cwd}/${arg}`
     const file = await uploadFile($, room, path)
-    if (!file) return { text: `Couldn't share ${arg}: no such file, or over 10 MB.` }
+    if (!file) return { text: `공유하지 못했습니다: ${arg}. 파일이 없거나 10 MB를 넘습니다.` }
     send($, 'artifact', { kind: 'send', files: [file], display: 'render', caption: '' })
-    return { text: `Shared ${file.name} with everyone here.` }
+    return { text: `${file.name} 파일을 모두에게 공유했습니다.` }
   })
 
   on('command.run', { command: 'share-preview' }, async ($, e) => {
     const room = await read($, roomA)
-    if ((await read($, modeA)) !== 'host' || !room) return { text: 'Share this session first: press Share or type /share-session.' }
+    if ((await read($, modeA)) !== 'host' || !room) return { text: '먼저 이 세션을 공유하세요. 공유하기를 누르거나 /share-session을 입력하면 됩니다.' }
     const [first, ...rest] = e.args.trim().split(/\s+/)
     const url = LOCAL_URL.exec(first ?? '')
     const port = Number(url?.[1] ?? first)
     if (!Number.isInteger(port) || port < 1 || port > 65535)
-      return { text: 'Which port? /share-preview <port|http://localhost:port/path> [title], e.g. /share-preview 3000' }
+      return { text: '어느 포트인가요? /share-preview <port|http://localhost:port/path> [title], 예: /share-preview 3000' }
     const title = rest.join(' ') || `localhost:${port}`
     // What the page uses beside it, in the same project: asked about above
     // the prompt, a service a question, and named here, with how to share
     // one that isn't asked about (`relatedSaid`).
     const page = url ? localPageOf(url) : null
     const forwarded = await hostForwards($, room, { port, title, path: page?.path ?? '/', host: page?.host, scheme: page?.scheme }, { offerRelated: 4_000 })
-    if (!forwarded) return { text: `Couldn't share localhost:${port}.` }
+    if (!forwarded) return { text: `localhost:${port} 주소를 공유하지 못했습니다.` }
     if ('refused' in forwarded) return { text: forwarded.refused }
     return { text: `${forwardedSaid([port])}${relatedSaid(await forwarded.related)}` }
   })
@@ -12397,7 +12394,7 @@ export const register: Register = (on, options) => {
     const mode = await read($, modeA)
     if (mode !== 'idle') await closeRoom($, mode === 'host' ? 'stop' : 'leave')
     return {
-      text: mode === 'idle' ? 'This session is not shared.' : mode === 'host' ? 'Stopped sharing. The link no longer works.' : 'Left the shared session.',
+      text: mode === 'idle' ? '이 세션은 공유 중이 아닙니다.' : mode === 'host' ? '공유를 끝냈습니다. 이제 링크로 들어올 수 없습니다.' : '공유 세션에서 나왔습니다.',
     }
   })
 
@@ -12516,7 +12513,7 @@ export const register: Register = (on, options) => {
       const hold = (await read($, roomA))?.id === link[2] ? null : await heldElsewhere($, link[2]).catch(() => null)
       if (hold && !(pastedAgain?.id === link[2] && now - pastedAgain.at < 2 * 60_000)) {
         pastedAgain = { id: link[2], at: now }
-        answerWith({ kind: 'note', text: `${alreadyIn(hold, await openHeld($, hold))} Paste the link again to join here as well.`, then: [] })
+        answerWith({ kind: 'note', text: `${alreadyIn(hold, await openHeld($, hold))} 여기서도 참여하려면 링크를 한 번 더 붙여 넣으세요.`, then: [] })
         return next(e)
       }
       // The link stays in the transcript as typed; the reply says what joining
@@ -12547,14 +12544,14 @@ export const register: Register = (on, options) => {
       const peer = fromPeer ? delivered(typed) : null
       if (peer?.address && (await prefsOf($)).relayPeers)
         tellPeer($, peer.address, `Still getting back into ${late.host}'s session, so this didn't reach their Claude. Send it again in a moment.`)
-      return keepHere(`Still getting back into **${late.host}**'s session, so this didn't go to Claude. Send it again in a moment.`)
+      return keepHere(`아직 **${late.host}**님 세션에 다시 연결하는 중이라 Claude에게 보내지 않았습니다. 잠시 뒤 다시 보내세요.`)
     }
     // The update command, typed here by a guest (the "is out" line names it):
     // run on this computer, never sent to the host's Claude to run there.
     if (mode === 'guest' && UPDATE_TYPED.test(typed)) {
       answerWith({
         kind: 'note',
-        text: `Updating Shared Sessions on this computer (this didn't go to ${(await read($, roomA))?.host ?? 'the host'}). A line below says when it's done.`,
+        text: `이 컴퓨터의 공유 세션 플러그인을 업데이트하는 중입니다(${(await read($, roomA))?.host ?? '방장'}에게는 보내지 않았습니다). 끝나면 아래에 한 줄로 알려 드립니다.`,
         then: [],
       })
       void updateHere($)
@@ -12570,10 +12567,10 @@ export const register: Register = (on, options) => {
       const name = tidySender(fromOwn.from)
       if (!(await prefsOf($)).relayPeers)
         return keepHere(
-          `A message from **${name}** stayed here: your **Room**'s Settings keep your other sessions' messages from ${room?.host ?? 'the host'}'s Claude.`,
+          `**${name}**에서 온 메시지는 여기 남겨 두었습니다. **방** 설정에서 내 다른 세션의 메시지를 ${room?.host ?? '방장'}의 Claude에게 보내지 않도록 해 두었습니다.`,
         )
-      if (!fromOwn.address || !fromOwn.text) return keepHere(`A message from **${name}** stayed here: it didn't say where an answer would go.`)
-      const refusal = room ? await relayRefusal($, room) : "This session isn't in a shared session any more, so this didn't reach anyone's Claude."
+      if (!fromOwn.address || !fromOwn.text) return keepHere(`**${name}**에서 온 메시지는 여기 남겨 두었습니다. 답을 어디로 보낼지 적혀 있지 않았습니다.`)
+      const refusal = room ? await relayRefusal($, room) : "이 세션은 더 이상 공유 세션에 들어가 있지 않아, 누구의 Claude에게도 전하지 않았습니다."
       if (!room || refusal) {
         tellPeer($, fromOwn.address, refusal!)
         return keepHere(refusal!)
@@ -12609,12 +12606,12 @@ export const register: Register = (on, options) => {
       const room = await read($, roomA)
       if ((await read($, policyA)).prompts === 'watch') {
         return keepHere(
-          `**${room?.host}** has this session on watch-only, so this didn't go to Claude. You can still follow every turn and talk to everyone in the **Room** panel.`,
+          `**${room?.host}**님이 이 세션을 보기만으로 설정해서 Claude에게 보내지 않았습니다. 모든 차례를 지켜보고 **방** 패널에서 모두와 이야기할 수는 있습니다.`,
         )
       }
       if ((await read($, peopleA)).some(p => p.role === 'host' && !p.online)) {
         return keepHere(
-          `**${room?.host}**'s Claude Code is closed right now, so this didn't go to Claude. The room stays open and carries on when they're back (the **Room** shows them here again); send it then.`,
+          `**${room?.host}**님의 Claude Code가 지금 닫혀 있어서 Claude에게 보내지 않았습니다. 방은 열려 있고 방장이 돌아오면 이어집니다(**방**에 다시 접속 중으로 나옵니다). 그때 다시 보내세요.`,
         )
       }
       const pid = newId()
@@ -12736,7 +12733,7 @@ export const register: Register = (on, options) => {
           for (const exchange of ride.then) laterRides.push({ text: exchange.prompt, ride: { kind: 'static', rows: exchange.rows } })
           for (const event of ride.open ?? []) {
             const shown = shownOf(event)
-            if (shown) laterRides.push({ text: `${room?.host ?? 'The host'} has ${shown.name} open`, ride: { kind: 'artifact', event } })
+            if (shown) laterRides.push({ text: `${room?.host ? `${room.host}님이` : '방장이'} 열어 둔 화면: ${shown.name}`, ride: { kind: 'artifact', event } })
           }
         }
       }
@@ -12771,7 +12768,7 @@ export const register: Register = (on, options) => {
       let answer = ''
       if (ride.kind === 'static' && staticRun) {
         staticRuns.delete(e.turnId)
-        answer = staticRun.tail || '_(it stopped here)_'
+        answer = staticRun.tail || '_(여기서 멈췄습니다)_'
         yield { kind: 'text', index: 0, text: answer } satisfies TurnStepChunk
       } else if (ride.kind === 'static') {
         // An earlier exchange, its own turn as it was for the host: its prompt
@@ -12781,7 +12778,7 @@ export const register: Register = (on, options) => {
         for (const run of runs) await saveRun($, run)
         const toolUses: { name: string; input: Record<string, unknown> }[] = []
         if (!blocks.length) {
-          answer = tail || '(no reply)'
+          answer = tail || '(답 없음)'
           yield { kind: 'text', index: 0, text: answer } satisfies TurnStepChunk
         }
         for (const [index, block] of blocks.entries()) {
@@ -12865,7 +12862,7 @@ export const register: Register = (on, options) => {
           if (ride.kind === 'own' && !state.current && unsent.has(ride.pid)) {
             const note = unsent.get(ride.pid)
             unsent.delete(ride.pid)
-            yield words(note ?? `This was too large to send to **${room.host}**'s session, so it didn't go to Claude.`)
+            yield words(note ?? `너무 커서 **${room.host}**님 세션으로 보내지 못했고, Claude에게 가지 않았습니다.`)
             break
           }
           let page: EventsPage
@@ -12925,7 +12922,7 @@ export const register: Register = (on, options) => {
         }
         // The step after a call ends with something to read: an empty reply
         // makes the engine ask for one more step.
-        if (!answer && e.index > 0) yield words('Opened.')
+        if (!answer && e.index > 0) yield words('열었습니다.')
       }
       yield { kind: 'stop', stopReason: 'end_turn', usage: null } satisfies TurnStepChunk
       return { turnId: e.turnId, index: e.index, answer, toolUses: [], stopReason: 'end_turn', usage: null }
@@ -12938,7 +12935,7 @@ export const register: Register = (on, options) => {
     // in the guest's settings can ask the engine to keep going) gets nothing.
     if (mode === 'guest' && e.agentId === undefined) {
       const room = await read($, roomA)
-      const note = e.index === 0 && !ride ? `_This session is attached to ${room?.host ?? 'the host'}'s; what you type goes there._` : ''
+      const note = e.index === 0 && !ride ? `_이 세션은 ${room?.host ?? '방장'} 세션에 연결되어 있습니다. 여기 입력한 내용은 그쪽으로 갑니다._` : ''
       if (note) yield { kind: 'text', index: 0, text: note } satisfies TurnStepChunk
       yield { kind: 'stop', stopReason: 'end_turn', usage: null } satisfies TurnStepChunk
       return { turnId: e.turnId, index: e.index, answer: note, toolUses: [], stopReason: 'end_turn', usage: null }
@@ -12972,7 +12969,7 @@ export const register: Register = (on, options) => {
     if (ride?.kind === 'own') ownPending.delete(ride.pid)
     $.ui.log(`Shared session: a riding step failed (${next.error.kind}${next.error.message ? `: ${next.error.message}` : ''})`, { to: 'debug' })
     const room = await read($, roomA)
-    const note = e.index === 0 || current ? `\n\n_Lost the thread of ${room?.host ?? 'the host'}'s reply here; it plays again below._` : ''
+    const note = e.index === 0 || current ? `\n\n_여기서 ${room?.host ?? '방장'}의 답을 놓쳤습니다. 아래에서 다시 재생됩니다._` : ''
     if (note) yield { kind: 'text', index: 0, text: note } satisfies TurnStepChunk
     yield { kind: 'stop', stopReason: 'end_turn', usage: null } satisfies TurnStepChunk
     return { turnId: e.turnId, index: e.index, answer: note, toolUses: [], stopReason: 'end_turn', usage: null }
@@ -13111,9 +13108,9 @@ export const register: Register = (on, options) => {
       const room = await read($, roomA)
       const watching = [...new Set((await read($, peopleA)).filter(p => p.online && p.role === 'guest' && !(room && isMe(p, room.seat))).map(p => p.name))]
       const line = working?.byGuest
-        ? `${working.by}'s prompt asked for this${watching.length ? ` · ${listNames(watching)} watching` : ''}`
+        ? `${working.by}님 요청으로 실행${watching.length ? ` · 보는 중: ${listNames(watching)}` : ''}`
         : watching.length
-          ? `${listNames(watching)} ${watching.length === 1 ? 'is' : 'are'} watching this session`
+          ? `이 세션을 보는 사람: ${listNames(watching)}`
           : ''
       if (line) {
         try {
@@ -13256,13 +13253,13 @@ export const register: Register = (on, options) => {
       what,
       extent,
       always,
-      question: `${who} wants Claude to run ${what.slice(0, 200)}${extent ? ` (${extent})` : ''}. Allow it?`,
+      question: `${who}님이 Claude에게 ${what.slice(0, 200)}${extent ? ` (${extent})` : ''} 실행을 요청했습니다. 허용할까요?`,
       preview: approvalPreview(e.tool, e.input, cwd),
       whole: approvalPreview(e.tool, e.input, cwd, WHOLE_CALL_LINES),
       descriptions: {
-        'Allow once': `Run this one ${e.tool} call for ${who}.`,
-        [always]: `Don't ask again for ${who}'s requests while this session is shared.`,
-        Decline: `Claude is told you declined and carries on without it.`,
+        'Allow once': `${who}님이 요청한 이 ${e.tool} 호출 한 번만 실행합니다.`,
+        [always]: `이 세션을 공유하는 동안 ${who}님 요청은 다시 묻지 않습니다.`,
+        Decline: `거절했다고 Claude에게 알리고, Claude는 그 작업 없이 계속합니다.`,
       },
       room: room ? roomIdentity(room) : '',
       stage: 'waiting',
@@ -13315,7 +13312,10 @@ export const register: Register = (on, options) => {
         let shown = true
         let said = 'Decline'
         try {
-          said = await $.ui.ask(ask.question, { header: ASK_HEADER, options })
+          // 화면에는 한국어로(11/27), 답은 원래 값으로 되돌려 쓴다(값은 여러 곳 · 다른 사람 플러그인이 맞춰 본다).
+          const back = new Map(options.map(o => [answerLabel(o), o]))
+          const picked = await $.ui.ask(ask.question, { header: ASK_HEADER, options: [...back.keys()] })
+          said = back.get(picked) ?? picked
           if (!options.includes(said)) shown = false // something else answered for it (a settings hook)
         } catch {
           // Dismissed after a look is a no; refused at once, it never showed (a
@@ -13340,7 +13340,7 @@ export const register: Register = (on, options) => {
             ask.stage = 'row'
             timer = $.clock.after(10 * 60_000, giveUp)
             await showBandAsk($)
-            $.ui.toast(`${who} wants Claude to run ${what.slice(0, 80)}: answer above the prompt`)
+            $.ui.toast(`${who}님이 Claude에게 ${what.slice(0, 80)} 실행을 요청했어요. 입력창 위에서 답해 주세요`)
             nudgeSidebar($)
             await approvalWait($, ask, answered, () => over)
           }
@@ -13449,7 +13449,7 @@ export const register: Register = (on, options) => {
       const lines = relayed.text.split('\n')
       const shown = e.props.isExpanded || lines.length <= 8 ? lines : lines.slice(0, 6)
       const quoted = shown.map(line => (line ? `> ${line}` : '>')).join('\n')
-      const more = shown.length < lines.length ? `\n>\n> … +${lines.length - shown.length} lines (ctrl+o to expand)` : ''
+      const more = shown.length < lines.length ? `\n>\n> … +${lines.length - shown.length}줄 (ctrl+o로 펼치기)` : ''
       return (
         <Box flexDirection="row" gap={1}>
           {avatar}
@@ -13458,7 +13458,7 @@ export const register: Register = (on, options) => {
               <Text bold color={color} hover={{ scope: `person-${said.who}`, inverse: true }}>
                 {said.who}
               </Text>
-              <Text dimColor>{`relayed a message from ${relayed.from}`}</Text>
+              <Text dimColor>{`${relayed.from}에서 온 메시지를 전했습니다`}</Text>
             </Box>
             <Markdown key="said" text={`${quoted}${more}`} />
           </Box>
@@ -13499,7 +13499,7 @@ export const register: Register = (on, options) => {
           </Text>
           {v.mode === 'host' ? (
             <Text size="caption" dimColor>
-              host
+              방장
             </Text>
           ) : null}
         </Box>
@@ -13563,7 +13563,7 @@ export const register: Register = (on, options) => {
               ◆
             </Text>
             <Text size="caption" dimColor>
-              Claude, for
+              Claude, 요청한 사람
             </Text>
             <Text size="caption" weight="semibold" color={colorOf(forWho)} hover={{ scope: `person-${forWho}`, inverse: true }}>
               {` ${forWho} `}
@@ -13580,10 +13580,10 @@ export const register: Register = (on, options) => {
           ) : (
             unreacted.map(c => chip(c.r, c.who, c.mine))
           )}
-          {stack && Svg ? <Svg source={stack.source} alt={`Seen by ${seenBy.join(', ')}`} width={stack.width} height={16} /> : null}
+          {stack && Svg ? <Svg source={stack.source} alt={`본 사람: ${seenBy.join(', ')}`} width={stack.width} height={16} /> : null}
           {seenBy.length ? (
             <Text size="caption" dimColor>
-              {`${listNames(seenBy)} saw this`}
+              {`본 사람: ${listNames(seenBy)}`}
             </Text>
           ) : null}
         </Box>
@@ -13602,7 +13602,7 @@ export const register: Register = (on, options) => {
     return (
       <Box flexDirection="row" gap={1}>
         {native}
-        <Text dimColor>{`· for ${lastTurnFor}${watching.length ? ` · ${listNames(watching)} watching` : ''}`}</Text>
+        <Text dimColor>{`· ${lastTurnFor}님 요청${watching.length ? ` · 보는 중: ${listNames(watching)}` : ''}`}</Text>
       </Box>
     )
   })
@@ -13638,7 +13638,7 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column">
         {drawn}
         <Box flexDirection="row" gap={1} paddingLeft={2}>
-          <Text dimColor>↳ for</Text>
+          <Text dimColor>↳ 요청한 사람</Text>
           <Text bold color={color}>
             {who}
           </Text>
@@ -13665,8 +13665,8 @@ export const register: Register = (on, options) => {
     const here = presence(v)
     const label =
       v.mode === 'host'
-        ? `shared${here.startsWith('with') ? ` ${here}` : ''}`
-        : `in ${v.room?.host}'s session${here ? ` ${here.startsWith('with') ? here : `· ${here}`}` : ''}`
+        ? `공유 중${here ? ` · ${here}` : ''}`
+        : `${v.room?.host}님 세션${here ? ` · ${here}` : ''}`
     return next({ ...e, props: { ...e.props, modes: [...e.props.modes, label] } })
   })
 
@@ -13676,15 +13676,15 @@ export const register: Register = (on, options) => {
     const host = v.room?.host
     const w = v.working
     let message: string | null = null
-    if (v.mode === 'host' && w?.byGuest) message = w.waitingFor ? `Waiting for your OK to run ${w.waitingFor}` : `Working for ${w.by}`
+    if (v.mode === 'host' && w?.byGuest) message = w.waitingFor ? `${w.waitingFor} 실행 허용을 기다리는 중` : `${w.by}님 요청 처리 중`
     // The host's own turn: the engine's words, and who's watching it.
     const watching = v.mode === 'host' ? new Set(v.everyone.filter(p => p.online && p.role === 'guest' && !isMe(p, v.me)).map(p => p.name)).size : 0
-    if (v.mode === 'host' && watching) message = `${message ?? e.props.message ?? e.props.word} · ${watching} watching`
+    if (v.mode === 'host' && watching) message = `${message ?? e.props.message ?? e.props.word} · ${watching}명 보는 중`
     if (v.mode === 'guest') {
-      if (w?.waitingFor) message = `Waiting for ${host} to allow ${w.waitingFor}`
-      else if (w?.doing) message = `${doingLine(w.doing)}${w.by === myName ? '' : ` · for ${w.by}`}`
-      else if (w) message = w.by === myName ? `Working on your prompt in ${host}'s session` : `Working for ${w.by}`
-      else message = `Waiting for ${host}'s session`
+      if (w?.waitingFor) message = `${host}님이 ${w.waitingFor} 실행을 허용하기를 기다리는 중`
+      else if (w?.doing) message = `${doingLine(w.doing)}${w.by === myName ? '' : ` · ${w.by}님 요청`}`
+      else if (w) message = w.by === myName ? `${host}님 세션에서 내 요청 처리 중` : `${w.by}님 요청 처리 중`
+      else message = `${host}님 세션을 기다리는 중`
     }
     return message ? next({ ...e, props: { ...e.props, message } }) : next(e)
   })
@@ -13697,15 +13697,15 @@ export const register: Register = (on, options) => {
       const others = [...new Set(v.everyone.filter(p => p.online && p.role === 'guest' && !isMe(p, v.me)).map(p => p.name))]
       if (!others.length) return next(e)
       const hint = e.props.isWorking
-        ? `${listNames(others)} ${others.length === 1 ? 'sees' : 'see'} this turn as it happens`
-        : `${listNames(others)} will see what you send · @name mentions someone`
+        ? `${listNames(others)}도 이 답을 실시간으로 봅니다`
+        : `${listNames(others)}도 보내는 내용을 봅니다 · @이름으로 멘션`
       return next({ ...e, props: { ...e.props, hint } })
     }
     if (v.mode !== 'guest') return next(e)
     const hint =
       v.policy.prompts === 'watch'
-        ? `Watch-only · chat in the Room (/room) · Leave anytime`
-        : `↵ sends to ${v.room?.host}'s session · @name mentions someone · Esc stops the turn`
+        ? `보기만 · 채팅은 방에서(/room) · 언제든 나갈 수 있음`
+        : `↵ ${v.room?.host}님 세션으로 보내기 · @이름으로 멘션 · Esc로 답 멈추기`
     return next({ ...e, props: { ...e.props, hint } })
   })
 
@@ -13724,29 +13724,29 @@ export const register: Register = (on, options) => {
     const now = await $.clock.now()
     const room = await read($, roomA)
     const mode = await read($, modeA)
-    const fail = (what: string) => (error: unknown) => $.ui.toast(`Couldn't ${what}: ${String((error as Error)?.message ?? error)}`)
+    const fail = (what: string) => (error: unknown) => $.ui.toast(`${what}에 실패했어요: ${String((error as Error)?.message ?? error)}`)
     const providerName = (id: string) => t.providers.find(p => p.id === id)?.label ?? (id === 'github' ? 'GitHub' : id === 'google' ? 'Google' : id)
 
     if (!t.account) {
       const signing = t.signingIn
       return (
         <Box flexDirection="column" gap={1}>
-          {Svg ? <Svg key="clover" source={cloverSvg(96)} alt="Clover" width={96} height={54} /> : null}
+          {Svg ? <Svg key="clover" source={cloverSvg(96)} alt="클로버" width={96} height={54} /> : null}
           <Text size="title" weight="semibold">
-            Share with your team
+            팀과 공유
           </Text>
           <Text size="footnote" dimColor>
-            Sign in, and your teammates' live sessions show up here, a press from joining. What you share goes to them.
+            로그인하면 팀원이 공유 중인 세션이 여기에 나타나고, 한 번 눌러 참여할 수 있습니다. 내가 공유하는 세션도 팀원에게 보입니다.
           </Text>
-          {t.invite ? <Text color="claude">Your invite is waiting: you join the team as soon as you're signed in.</Text> : null}
+          {t.invite ? <Text color="claude">초대가 기다리고 있습니다. 로그인하면 바로 팀에 참여합니다.</Text> : null}
           {t.error ? <Text color="error">{t.error}</Text> : null}
           {signing ? (
             <Box flexDirection="column" gap={1} marginTop={1}>
-              <Text>{`Finish signing in with ${providerName(signing.provider)} in your browser…`}</Text>
+              <Text>{`브라우저에서 ${providerName(signing.provider)} 로그인을 마쳐 주세요…`}</Text>
               <Text>{codeSaid(signing.code)}</Text>
               <Box flexDirection="row" gap={1} alignItems="center">
-                {Link && linkable(signing.url) ? <Link href={signing.url} label="Open the sign-in page again" /> : null}
-                <Button key="signin-cancel" label="Cancel" plain dimColor onPress={() => void cancelSignIn($)} />
+                {Link && linkable(signing.url) ? <Link href={signing.url} label="로그인 페이지 다시 열기" /> : null}
+                <Button key="signin-cancel" label="취소" plain dimColor onPress={() => void cancelSignIn($)} />
               </Box>
             </Box>
           ) : t.providers.length ? (
@@ -13754,16 +13754,16 @@ export const register: Register = (on, options) => {
               {t.providers.map((p, i) => (
                 <Button
                   key={`signin-${p.id}`}
-                  label={`Sign in with ${p.label}`}
+                  label={`${p.label} 계정으로 로그인`}
                   variant={i === 0 ? 'primary' : undefined}
-                  onPress={() => void startSignIn($, p.id).catch(fail('sign in'))}
+                  onPress={() => void startSignIn($, p.id).catch(fail('로그인'))}
                 />
               ))}
             </Box>
           ) : t.loaded ? (
-            <Text dimColor>This share server has no sign-in, so teams aren't available on it. Sharing by link still works.</Text>
+            <Text dimColor>이 공유 서버에는 로그인이 없어 팀 기능을 쓸 수 없습니다. 링크로 공유하는 것은 그대로 됩니다.</Text>
           ) : (
-            <Text dimColor>Loading…</Text>
+            <Text dimColor>불러오는 중…</Text>
           )}
         </Box>
       )
@@ -13782,13 +13782,13 @@ export const register: Register = (on, options) => {
               <Text wrap="truncate-end">{tidyTitle(invite.room.title)}</Text>
               <Text wrap="truncate-end">
                 <Text color={color}>{invite.from.name}</Text>
-                <Text dimColor>{` invited you · ${ago(invite.at, now)}`}</Text>
+                <Text dimColor>{`님이 초대했습니다 · ${ago(invite.at, now)}`}</Text>
               </Text>
             </Box>
           </Box>
           <Box flexDirection="row" gap={1} flexShrink={0}>
-            <Button key={`inv-join-${invite.room.id}`} label="Join" variant="primary" onPress={press => void joinInvited($, invite, press.surface)} />
-            <Button key={`inv-dismiss-${invite.room.id}`} label="Dismiss" plain dimColor onPress={() => void dropInvite($, invite.room.id)} />
+            <Button key={`inv-join-${invite.room.id}`} label="참여하기" variant="primary" onPress={press => void joinInvited($, invite, press.surface)} />
+            <Button key={`inv-dismiss-${invite.room.id}`} label="닫기" plain dimColor onPress={() => void dropInvite($, invite.room.id)} />
           </Box>
         </Box>
       )
@@ -13800,20 +13800,20 @@ export const register: Register = (on, options) => {
           dimColor
           wrap="truncate-end"
         >{`Signed in as ${account.name}${account.login && account.login !== account.name ? ` (${account.login})` : ''} · ${providerName(account.provider)}`}</Text>
-        <Button key="signout" label="Sign out" plain dimColor onPress={() => void signOut($)} />
+        <Button key="signout" label="로그아웃" plain dimColor onPress={() => void signOut($)} />
       </Box>
     )
     const newTeam = (autoFocus: boolean) =>
       Input ? (
         <Input
           key="team-new"
-          placeholder="Team name"
-          submitLabel="Create team"
+          placeholder="팀 이름"
+          submitLabel="팀 만들기"
           autoFocus={autoFocus || undefined}
           onSubmit={(value: string) =>
             void createTeam($, value)
               .then(() => update($, teamsA, x => ({ ...x, creating: false })))
-              .catch(fail('make the team'))
+              .catch(fail('팀 만들기'))
           }
         />
       ) : (
@@ -13825,16 +13825,16 @@ export const register: Register = (on, options) => {
         <Box flexDirection="column" gap="lg">
           {invites.length ? (
             <Box flexDirection="column" gap={1}>
-              {headingOf(el, 'Invited you')}
+              {headingOf(el, '받은 초대')}
               {invites.map(inviteRow)}
             </Box>
           ) : null}
           <Box flexDirection="column" gap={1}>
             <Text size="title" weight="semibold">
-              Make your team
+              팀 만들기
             </Text>
             <Text size="footnote" dimColor>
-              Name it, then send its invite link to teammates. Got a link from someone? Paste it as your message instead.
+              이름을 정하고 초대 링크를 팀원에게 보냅니다. 받은 링크가 있으면 입력창에 붙여 넣어 보내면 됩니다.
             </Text>
           </Box>
           {newTeam(true)}
@@ -13869,14 +13869,14 @@ export const register: Register = (on, options) => {
               </Text>
               <Text wrap="truncate-end">
                 <Text color={s.hostOnline ? color : undefined} dimColor={!s.hostOnline}>
-                  {mine ? 'You' : s.host}
+                  {mine ? '나' : s.host}
                 </Text>
                 <Text dimColor>
                   {[
                     '',
-                    s.hostOnline ? ago(s.createdAt, now) : 'away',
-                    others.length ? `with ${listNames(others)}` : '',
-                    inElsewhere ? (here[s.id] ? "you're in it in another session" : "you're in it elsewhere") : '',
+                    s.hostOnline ? ago(s.createdAt, now) : '자리 비움',
+                    others.length ? `${listNames(others)}과 함께` : '',
+                    inElsewhere ? (here[s.id] ? "다른 세션에서 참여 중" : "다른 곳에서 참여 중") : '',
                   ]
                     .filter((x, i) => i === 0 || x)
                     .join(' · ')}
@@ -13886,14 +13886,14 @@ export const register: Register = (on, options) => {
           </Box>
           <Box flexShrink={0} flexDirection="row" gap={1}>
             {inIt ? (
-              <Text color="claude">{mode === 'host' ? 'This session' : "You're in it"}</Text>
+              <Text color="claude">{mode === 'host' ? '이 세션' : "참여 중"}</Text>
             ) : mine ? (
               [
-                here[s.id] ? <Button key={`open-${s.id}`} label="Open" plain onPress={() => void openHere($, s.id)} /> : null,
+                here[s.id] ? <Button key={`open-${s.id}`} label="열기" plain onPress={() => void openHere($, s.id)} /> : null,
                 stopping === `stop:${s.id}` ? (
-                  <Button key={`stop-${s.id}`} label="Stop for everyone?" variant="primary" onPress={() => void stopFromTeam($, s.id)} />
+                  <Button key={`stop-${s.id}`} label="정말 공유를 끝낼까요?" variant="primary" onPress={() => void stopFromTeam($, s.id)} />
                 ) : (
-                  <Button key={`stop-${s.id}`} label="Stop" plain onPress={() => void stopFromTeam($, s.id)} />
+                  <Button key={`stop-${s.id}`} label="공유 끝내기" plain onPress={() => void stopFromTeam($, s.id)} />
                 ),
               ]
             ) : inElsewhere ? (
@@ -13901,27 +13901,27 @@ export const register: Register = (on, options) => {
               // (Join here too): Leave takes every seat of yours out.
               [
                 here[s.id] ? (
-                  <Button key={`open-${s.id}`} label="Open" plain onPress={() => void openHere($, s.id)} />
+                  <Button key={`open-${s.id}`} label="열기" plain onPress={() => void openHere($, s.id)} />
                 ) : (
-                  <Button key={`join-${s.id}`} label="Join" plain dimColor onPress={press => void joinFromTeam($, [s], press.surface)} />
+                  <Button key={`join-${s.id}`} label="참여하기" plain dimColor onPress={press => void joinFromTeam($, [s], press.surface)} />
                 ),
                 stopping === `leave:${s.id}` ? (
-                  <Button key={`leave-${s.id}`} label="Leave everywhere?" variant="primary" onPress={() => void leaveFromTeam($, s.id)} />
+                  <Button key={`leave-${s.id}`} label="모든 곳에서 나갈까요?" variant="primary" onPress={() => void leaveFromTeam($, s.id)} />
                 ) : (
-                  <Button key={`leave-${s.id}`} label="Leave" plain onPress={() => void leaveFromTeam($, s.id)} />
+                  <Button key={`leave-${s.id}`} label="나가기" plain onPress={() => void leaveFromTeam($, s.id)} />
                 ),
               ]
             ) : here[s.id] ? (
-              <Button key={`open-${s.id}`} label="Open" plain onPress={() => void openHere($, s.id)} />
+              <Button key={`open-${s.id}`} label="열기" plain onPress={() => void openHere($, s.id)} />
             ) : canJoin ? (
               <Button
                 key={`join-${s.id}`}
-                label="Join"
+                label="참여하기"
                 variant={joinable.length === 1 ? 'primary' : undefined}
                 onPress={press => void joinFromTeam($, [s], press.surface)}
               />
             ) : (
-              <Button key={`join-${s.id}`} label="Join" plain dimColor onPress={press => void joinFromTeam($, [s], press.surface)} />
+              <Button key={`join-${s.id}`} label="참여하기" plain dimColor onPress={press => void joinFromTeam($, [s], press.surface)} />
             )}
           </Box>
         </Box>
@@ -13952,18 +13952,18 @@ export const register: Register = (on, options) => {
         </Box>
         {keptHere($, t.server ?? (await serverOf($))) ? (
           <Text size="footnote" dimColor>
-            Sessions shared with the team keep their turns: everyone in it can search them.
+            팀에 공유한 세션은 대화 기록이 남아 팀원 누구나 검색할 수 있습니다.
           </Text>
         ) : null}
         {teamUpdate}
         {Select
           ? settingOf(
               el,
-              'Your shares go',
+              '공유 대상',
               <Select
                 key="share-to"
                 value={t.byLink ? 'link' : team.id}
-                options={[...t.teams.map(x => ({ value: x.id, label: `To ${x.name}` })), { value: 'link', label: 'By link alone' }]}
+                options={[...t.teams.map(x => ({ value: x.id, label: `${x.name}에 공유` })), { value: 'link', label: '링크로만 공유' }]}
                 onSelect={(value: string) => void setCurrentTeam($, value === 'link' ? null : value)}
               />,
             )
@@ -13971,12 +13971,12 @@ export const register: Register = (on, options) => {
         {room && mode === 'host' ? (
           <Box flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
             <Text size="footnote" dimColor wrap="truncate-end">
-              {room.team ? `This session: shared with ${room.team.name}` : 'This session: shared by link'}
+              {room.team ? `이 세션: ${room.team.name}에 공유 중` : '이 세션: 링크로 공유 중'}
             </Text>
             {room.team ? (
-              <Button key="room-unteam" label="Link only" plain onPress={() => void setRoomTeam($, null)} />
+              <Button key="room-unteam" label="링크로만" plain onPress={() => void setRoomTeam($, null)} />
             ) : (
-              <Button key="room-team" label={`Share with ${team.name}`} plain onPress={() => void setRoomTeam($, team.id)} />
+              <Button key="room-team" label={`${team.name}에 공유하기`} plain onPress={() => void setRoomTeam($, team.id)} />
             )}
           </Box>
         ) : null}
@@ -13988,9 +13988,9 @@ export const register: Register = (on, options) => {
     const tabs = tabsOf(
       el,
       [
-        { id: 'live', label: 'Live', count: liveCount + invites.length || undefined, news: invites.length > 0 || joinable.length > 0 },
-        { id: 'people', label: 'People', count: t.members.length || undefined },
-        { id: 'settings', label: 'Settings' },
+        { id: 'live', label: '진행 중', count: liveCount + invites.length || undefined, news: invites.length > 0 || joinable.length > 0 },
+        { id: 'people', label: '멤버', count: t.members.length || undefined },
+        { id: 'settings', label: '설정' },
       ],
       tab,
       id => void update($, teamTabA, () => id),
@@ -14000,26 +14000,26 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column" gap="lg">
         {invites.length ? (
           <Box flexDirection="column" gap={1}>
-            {headingOf(el, 'Invited you')}
+            {headingOf(el, '받은 초대')}
             {invites.map(inviteRow)}
           </Box>
         ) : null}
         <Box flexDirection="column" gap={1}>
           {headingOf(
             el,
-            'Live now',
+            '지금 진행 중',
             joinable.length > 1 ? (
-              <Button key="join-all" label="Join all" variant="primary" onPress={press => void joinFromTeam($, joinable, press.surface)} />
+              <Button key="join-all" label="모두 참여하기" variant="primary" onPress={press => void joinFromTeam($, joinable, press.surface)} />
             ) : t.sessions.length ? (
-              `${t.sessions.length} shared`
+              `${t.sessions.length}개 공유 중`
             ) : (
               ''
             ),
           )}
           {t.sessions.map(sessionRow)}
-          {t.sessions.length ? null : <Text dimColor>{`Nothing is shared with ${team.name} right now. A session someone shares with it shows up here.`}</Text>}
+          {t.sessions.length ? null : <Text dimColor>{`지금 ${team.name}에 공유된 세션이 없습니다. 누군가 이 팀에 세션을 공유하면 여기에 나타납니다.`}</Text>}
           {joinable.length > 1 ? (
-            <Text dimColor>{mode === 'idle' ? 'Join all: the first joins here, the rest in new sessions.' : 'Join all: each opens in a new session.'}</Text>
+            <Text dimColor>{mode === 'idle' ? '모두 참여하기: 첫 세션은 여기서, 나머지는 새 세션에서 열립니다.' : '모두 참여하기: 각각 새 세션에서 열립니다.'}</Text>
           ) : null}
         </Box>
       </Box>
@@ -14043,25 +14043,25 @@ export const register: Register = (on, options) => {
                 ) : null}
               </Box>
               <Text size="caption" dimColor>
-                {[m.role === 'owner' ? 'owner' : '', m.id === account.id ? 'you' : ''].filter(Boolean).join(' · ')}
+                {[m.role === 'owner' ? '팀장' : '', m.id === account.id ? '나' : ''].filter(Boolean).join(' · ')}
               </Text>
             </Box>
           ))}
         </Box>
         <Box flexDirection="column" gap={1}>
-          {headingOf(el, 'Invite to the team', 'they paste it, or open it')}
+          {headingOf(el, '팀에 초대', '받은 사람이 붙여 넣거나 열면 됩니다')}
           <Box flexDirection="row" alignItems="center" gap={1} borderStyle="round" borderDimColor paddingX={1}>
             <Box flexGrow={1} flexShrink={1} minWidth={0}>
               <Text dimColor wrap="truncate-middle">
                 {invite.replace(/^https?:\/\//, '')}
               </Text>
             </Box>
-            <Button key="invite-copy" label="Copy invite link" plain onPress={press => void copyText($, invite, 'Invite link copied', press.surface)} />
+            <Button key="invite-copy" label="초대 링크 복사" plain onPress={press => void copyText($, invite, '초대 링크를 복사했어요', press.surface)} />
           </Box>
           {owner ? (
             <Box flexDirection="row" gap={1} alignItems="center">
-              <Button key="invite-new" label="Replace invite link" plain dimColor onPress={() => void newInvite($).catch(fail('replace the link'))} />
-              <Text dimColor>The old link stops working</Text>
+              <Button key="invite-new" label="초대 링크 바꾸기" plain dimColor onPress={() => void newInvite($).catch(fail('링크 바꾸기'))} />
+              <Text dimColor>이전 링크는 더 이상 쓸 수 없습니다</Text>
             </Box>
           ) : null}
         </Box>
@@ -14072,66 +14072,65 @@ export const register: Register = (on, options) => {
       <Box flexDirection="column" gap="lg">
         {owner ? (
           <Box flexDirection="column" gap={1}>
-            {headingOf(el, `Everyone in ${team.name}`, '')}
+            {headingOf(el, `${team.name} 전체`, '')}
             {Select
               ? settingOf(
                   el,
-                  'Who can join',
+                  '참여할 수 있는 사람',
                   <Select
                     key="team-access"
                     value={team.access}
                     options={[
-                      { value: 'members', label: 'Only people in the team' },
-                      { value: 'link', label: 'Anyone with the link' },
+                      { value: 'members', label: '팀 멤버만' },
+                      { value: 'link', label: '링크가 있는 누구나' },
                     ]}
-                    onSelect={(value: string) => void changeTeam($, { access: value === 'link' ? 'link' : 'members' }).catch(fail('change it'))}
+                    onSelect={(value: string) => void changeTeam($, { access: value === 'link' ? 'link' : 'members' }).catch(fail('설정 바꾸기'))}
                   />,
                 )
               : null}
             {Input
               ? settingOf(
                   el,
-                  'Join by email domain',
+                  '이메일 도메인으로 참여',
                   <Input
                     key={`team-domains-${(team.domains ?? []).join(',')}`}
                     value={(team.domains ?? []).join(', ')}
                     placeholder="example.com"
-                    submitLabel="Save"
-                    onSubmit={(value: string) => void changeTeam($, { domains: value }).catch(fail('save it'))}
+                    submitLabel="저장"
+                    onSubmit={(value: string) => void changeTeam($, { domains: value }).catch(fail('저장'))}
                   />,
                 )
               : null}
             {Input
               ? settingOf(
                   el,
-                  'Join by GitHub org',
+                  'GitHub 조직으로 참여',
                   <Input
                     key={`team-orgs-${(team.githubOrgs ?? []).join(',')}`}
                     value={(team.githubOrgs ?? []).join(', ')}
                     placeholder="your-org"
-                    submitLabel="Save"
-                    onSubmit={(value: string) => void changeTeam($, { githubOrgs: value }).catch(fail('save it'))}
+                    submitLabel="저장"
+                    onSubmit={(value: string) => void changeTeam($, { githubOrgs: value }).catch(fail('저장'))}
                   />,
                 )
               : null}
             <Text dimColor>
-              People who sign in with a verified email at the domain, or with GitHub as a member of the org, join by themselves. You can add your own email's
-              domain (not a public one like gmail.com) and orgs you're in.
+              이 도메인의 인증된 이메일로 로그인하거나, 이 조직의 멤버로 GitHub에 로그인한 사람은 자동으로 참여합니다. 내 이메일의 도메인(gmail.com 같은 공용 도메인 제외)과 내가 속한 조직을 넣을 수 있습니다.
             </Text>
           </Box>
         ) : null}
         <Box flexDirection="column" gap={1}>
-          {headingOf(el, 'Just you', '')}
+          {headingOf(el, '내 설정', '')}
           {Select
             ? settingOf(
                 el,
-                'Invites to a session',
+                '세션 초대',
                 <Select
                   key="invite-notify"
                   value={(await $.store.get(NOTIFY_KEY).catch(() => undefined)) === false ? 'quiet' : 'notify'}
                   options={[
-                    { value: 'notify', label: 'Notify me' },
-                    { value: 'quiet', label: 'Just show them' },
+                    { value: 'notify', label: '알림 받기' },
+                    { value: 'quiet', label: '목록에만 표시' },
                   ]}
                   onSelect={(value: string) => void $.store.set(NOTIFY_KEY, value !== 'quiet').then(() => $.ui.invalidate('ui.render'))}
                 />,
@@ -14143,11 +14142,11 @@ export const register: Register = (on, options) => {
           <Box flexDirection="row" gap={1} justifyContent="space-between">
             <Button
               key="team-create"
-              label={t.creating ? 'Cancel' : 'New team'}
+              label={t.creating ? '취소' : '새 팀'}
               plain
               onPress={() => void update($, teamsA, x => ({ ...x, creating: !x.creating }))}
             />
-            <Button key="team-leave" label={`Leave ${team.name}`} plain dimColor onPress={() => void leaveTeam($).catch(fail('leave'))} />
+            <Button key="team-leave" label={`${team.name} 나가기`} plain dimColor onPress={() => void leaveTeam($).catch(fail('leave'))} />
           </Box>
         </Box>
       </Box>
@@ -14179,15 +14178,15 @@ export const register: Register = (on, options) => {
       if (v.asking) return shareChoice($, el, v.asking, 'room', e.surface, await shareTeamName($))
       return (
         <Box flexDirection="column" gap={1}>
-          <Text bold>This session isn't shared</Text>
-          <Text dimColor>Share it, and teammates join from their own Claude Code with a link. They see the conversation live and can prompt Claude here.</Text>
+          <Text bold>이 세션은 공유 중이 아닙니다</Text>
+          <Text dimColor>공유하면 팀원이 링크로 각자의 Claude Code에서 참여합니다. 대화를 실시간으로 보고, 여기서 Claude에게 요청할 수 있습니다.</Text>
           {takingBackNow() || (await closingNow($)) ? null : (
             <Box flexDirection="row" marginTop={1}>
               <Button
                 key="room-share"
-                label="Share this session"
+                label="이 세션 공유하기"
                 variant="primary"
-                onPress={press => void requestShare($, press.surface).catch(error => $.ui.log(`Couldn't share: ${String(error?.message ?? error)}`))}
+                onPress={press => void requestShare($, press.surface).catch(error => $.ui.log(`공유하지 못했어요: ${String(error?.message ?? error)}`))}
               />
             </Box>
           )}
@@ -14219,14 +14218,14 @@ export const register: Register = (on, options) => {
           <Text bold color={colorOf(approving.who)}>
             {approving.who}
           </Text>
-          <Text>{' wants Claude to run '}</Text>
+          <Text>{'님이 Claude에게 실행 요청: '}</Text>
           <Text bold>{approving.what}</Text>
         </Text>
         {waiting ? <Markdown key="approval-whole" text={waiting.whole} /> : null}
         <Box flexDirection="row" gap={1}>
-          <Button key="room-approve-once" label="Allow once" variant="primary" onPress={() => answerBandAsk(approving.id, 'Allow once')} />
-          <Button key="room-approve-always" label={approving.always} plain onPress={() => answerBandAsk(approving.id, approving.always)} />
-          <Button key="room-approve-no" label="Decline" plain dimColor onPress={() => answerBandAsk(approving.id, 'Decline')} />
+          <Button key="room-approve-once" label="이번만 허용" variant="primary" onPress={() => answerBandAsk(approving.id, 'Allow once')} />
+          <Button key="room-approve-always" label={answerLabel(approving.always)} plain onPress={() => answerBandAsk(approving.id, approving.always)} />
+          <Button key="room-approve-no" label="거절" plain dimColor onPress={() => answerBandAsk(approving.id, 'Decline')} />
         </Box>
       </Box>
     ) : null
@@ -14247,10 +14246,10 @@ export const register: Register = (on, options) => {
         <Box key="cloud" flexDirection="column" gap={1} borderStyle="round" borderDimColor paddingX={1}>
           <Text wrap="truncate-end">
             <Text weight="semibold" color="claude">
-              In the cloud
+              클라우드에서 실행 중
             </Text>
             <Text dimColor>
-              {` · ${cloud.state === 'starting' ? 'starting' : cloud.state === 'stopped' ? 'stopped' : `since ${hhmm(cloud.since)}`} · you approve teammates’ calls`}
+              {` · ${cloud.state === 'starting' ? 'starting' : cloud.state === 'stopped' ? 'stopped' : `since ${hhmm(cloud.since)}`} · 팀원의 실행은 내가 허용`}
             </Text>
           </Text>
           {cloudAsks.map(ask =>
@@ -14261,11 +14260,11 @@ export const register: Register = (on, options) => {
                 <Box flexDirection="row" gap={1}>
                   <Button
                     key={`cloud-ask-yes-${ask.id}`}
-                    label={ask.options[0] ?? 'Share'}
+                    label={answerLabel(ask.options[0] ?? 'Share')}
                     variant="primary"
                     onPress={() => void answerCloudAsk($, ask.id, ask.options[0] ?? 'Share')}
                   />
-                  <Button key={`cloud-ask-not-now-${ask.id}`} label="Not now" plain dimColor onPress={() => void answerCloudAsk($, ask.id, 'Not now')} />
+                  <Button key={`cloud-ask-not-now-${ask.id}`} label="나중에" plain dimColor onPress={() => void answerCloudAsk($, ask.id, 'Not now')} />
                 </Box>
               </Box>
             ) : (
@@ -14274,16 +14273,16 @@ export const register: Register = (on, options) => {
                   <Text bold color={colorOf(ask.who)}>
                     {ask.who}
                   </Text>
-                  <Text>{' wants the cloud host to run '}</Text>
+                  <Text>{'님이 클라우드 세션에 실행 요청: '}</Text>
                   <Text bold>{ask.what}</Text>
                 </Text>
                 {ask.preview ? <Markdown key={`cloud-ask-whole-${ask.id}`} text={ask.preview} /> : null}
                 <Box flexDirection="row" gap={1}>
-                  <Button key={`cloud-ask-once-${ask.id}`} label="Allow once" variant="primary" onPress={() => void answerCloudAsk($, ask.id, 'Allow once')} />
+                  <Button key={`cloud-ask-once-${ask.id}`} label="이번만 허용" variant="primary" onPress={() => void answerCloudAsk($, ask.id, 'Allow once')} />
                   {ask.always ? (
-                    <Button key={`cloud-ask-always-${ask.id}`} label={ask.always} plain onPress={() => void answerCloudAsk($, ask.id, ask.always)} />
+                    <Button key={`cloud-ask-always-${ask.id}`} label={answerLabel(ask.always)} plain onPress={() => void answerCloudAsk($, ask.id, ask.always)} />
                   ) : null}
-                  <Button key={`cloud-ask-no-${ask.id}`} label="Decline" plain dimColor onPress={() => void answerCloudAsk($, ask.id, 'Decline')} />
+                  <Button key={`cloud-ask-no-${ask.id}`} label="거절" plain dimColor onPress={() => void answerCloudAsk($, ask.id, 'Decline')} />
                 </Box>
               </Box>
             ),
@@ -14291,15 +14290,15 @@ export const register: Register = (on, options) => {
           <Box flexDirection="row" gap={1} alignItems="center">
             <Button
               key="cloud-home"
-              label={cloudMove?.stage === 'home' ? 'Bringing it home…' : 'Bring home'}
+              label={cloudMove?.stage === 'home' ? '가져오는 중…' : '이 컴퓨터로 가져오기'}
               variant={cloudAsks.length ? 'secondary' : 'primary'}
               onPress={() => void bringHome($)}
             />
             <Box flexShrink={1} minWidth={0}>
               {cloudMove?.stage === 'failed' ? (
-                <Text color="error">{cloudMove.note ?? "Couldn't bring it home."}</Text>
+                <Text color="error">{cloudMove.note ?? "가져오지 못했어요."}</Text>
               ) : (
-                <Text dimColor>Takes the session back here, with the cloud host's changes to your files.</Text>
+                <Text dimColor>클라우드 세션에서 바뀐 파일과 함께 세션을 이 컴퓨터로 다시 가져옵니다.</Text>
               )}
             </Box>
           </Box>
@@ -14308,51 +14307,50 @@ export const register: Register = (on, options) => {
     const cloudMoveBlock =
       !isHost || runnerHere ? null : cloudMove?.stage === 'token' ? (
         <Box key="cloud-token" flexDirection="column" gap={1} borderStyle="round" borderDimColor paddingX={1}>
-          <Text weight="semibold">Move to cloud signs in to Claude as you</Text>
+          <Text weight="semibold">클라우드로 옮기면 내 계정으로 Claude에 로그인합니다</Text>
           <Box flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
             <Box flexShrink={1} minWidth={0}>
-              <Text>1. In a terminal, run claude setup-token and approve it in your browser.</Text>
+              <Text>1. 터미널에서 claude setup-token을 실행한 뒤 브라우저에서 허용합니다.</Text>
             </Box>
             <Button
               key="cloud-copy-command"
-              label="Copy command"
+              label="명령 복사"
               plain
-              onPress={press => void copyText($, 'claude setup-token', 'Command copied: run it in a terminal', press.surface)}
+              onPress={press => void copyText($, 'claude setup-token', '명령을 복사했어요. 터미널에서 실행해 주세요', press.surface)}
             />
           </Box>
-          <Text>2. Copy the token it prints, then press Use copied token.</Text>
+          <Text>2. 출력된 토큰을 복사한 뒤 「복사한 토큰 사용」을 누릅니다.</Text>
           <Text dimColor>
-            The token stays on this computer and goes to the cloud host when you move; it's never shown. Teammates' prompts there use your Claude plan, and
-            every call of theirs asks you first. Revoke it any time at claude.ai.
+            토큰은 이 컴퓨터에 보관되다가 옮길 때 클라우드 세션으로 전달되며, 화면에 표시되지 않습니다. 그곳에서 팀원이 보낸 요청은 내 Claude 요금제를 쓰고, 팀원의 실행은 매번 내게 먼저 묻습니다. claude.ai에서 언제든 해지할 수 있습니다.
           </Text>
           {cloudMove.note ? <Text color="error">{cloudMove.note}</Text> : null}
           <Box flexDirection="row" gap={1}>
             <Button
               key="cloud-use-token"
-              label="Use copied token"
+              label="복사한 토큰 사용"
               variant="primary"
               onPress={() => void takeCopiedToken($).then(ok => (ok ? moveToCloud($) : undefined))}
             />
-            <Button key="cloud-cancel" label="Cancel" plain dimColor onPress={() => void update($, cloudMoveA, () => null)} />
+            <Button key="cloud-cancel" label="취소" plain dimColor onPress={() => void update($, cloudMoveA, () => null)} />
           </Box>
         </Box>
       ) : cloudMove?.stage === 'packing' || cloudMove?.stage === 'starting' ? (
         <Text key="cloud-moving" dimColor>
-          {cloudMove.stage === 'packing' ? 'Packing the project…' : 'Starting the cloud host. The first time can take a minute or two…'}
+          {cloudMove.stage === 'packing' ? '프로젝트를 묶는 중…' : '클라우드 세션을 시작하는 중입니다. 처음에는 1~2분 걸릴 수 있습니다…'}
         </Text>
       ) : cloudMove?.stage === 'failed' ? (
         <Box key="cloud-failed" flexDirection="column" gap={1}>
-          <Text color="error">{cloudMove.note ?? "Couldn't move the session."}</Text>
+          <Text color="error">{cloudMove.note ?? "세션을 옮기지 못했어요."}</Text>
           <Box flexDirection="row" gap={1}>
-            <Button key="cloud-retry" label="Try again" variant="secondary" onPress={() => void moveToCloud($)} />
-            <Button key="cloud-dismiss" label="Cancel" plain dimColor onPress={() => void update($, cloudMoveA, () => null)} />
+            <Button key="cloud-retry" label="다시 시도" variant="secondary" onPress={() => void moveToCloud($)} />
+            <Button key="cloud-dismiss" label="취소" plain dimColor onPress={() => void update($, cloudMoveA, () => null)} />
           </Box>
         </Box>
       ) : (
         <Box key="cloud-move" flexDirection="row" gap={1} alignItems="center">
-          <Button key="cloud-move" label="Move to cloud" variant="secondary" onPress={() => void moveToCloud($)} />
+          <Button key="cloud-move" label="클라우드로 옮기기" variant="secondary" onPress={() => void moveToCloud($)} />
           <Box flexShrink={1} minWidth={0}>
-            <Text dimColor>Keeps the session running for everyone when this computer sleeps. You approve teammates' calls from wherever you are.</Text>
+            <Text dimColor>이 컴퓨터가 잠들어도 세션이 모두에게 계속 열려 있습니다. 팀원의 실행은 어디서든 허용할 수 있습니다.</Text>
           </Box>
         </Box>
       )
@@ -14371,8 +14369,8 @@ export const register: Register = (on, options) => {
       previewOpen !== 'window'
         ? ''
         : windowing && !windowing.window
-          ? ` in a preview window, which can't open here: ${windowing.reason}. Change Previews in Settings to open it without one.`
-          : ' in a preview window'
+          ? ` · 미리보기 창이 여기서 열리지 않습니다: ${windowing.reason}. 설정의 「미리보기」를 바꾸면 창 없이 열 수 있습니다.`
+          : ' · 미리보기 창에서'
     // Claude's browser is Desktop's: auto mode refused it, and nothing allows it yet.
     const desktop = await isDesktop($)
     const paneRefused = !isHost && desktop && (await read($, paneRefusedA))
@@ -14408,26 +14406,26 @@ export const register: Register = (on, options) => {
     const signedIn = isHost && Boolean((await read($, teamsA)).account)
     const keeps = isHost ? keptHere($, room.server) : undefined
     const kept =
-      keeps === true ? (signedIn ? `Turns are kept for ${room.team ? room.team.name : 'you'} to search.` : "Turns aren't kept: you aren't signed in here.") : ''
+      keeps === true ? (signedIn ? `${room.team ? `${room.team.name} 팀이` : '내가'} 나중에 대화 기록을 검색할 수 있습니다.` : "여기서 로그인하지 않아 대화 기록을 남기지 않습니다.") : ''
     const header = (
       <Box flexDirection="column" gap="sm">
         <Box flexDirection="column" gap="xs">
           <Box flexDirection="row" alignItems="center" justifyContent="space-between" gap={2}>
             <Box flexDirection="row" alignItems="center" gap={1} flexShrink={1} minWidth={0}>
               <Text size="heading" weight="semibold" color={live ? undefined : 'warning'}>
-                {!live ? 'Reconnecting' : isHost ? 'Sharing' : 'Joined'}
+                {!live ? '다시 연결 중' : isHost ? '공유 중' : '참여 중'}
               </Text>
               <Text size="footnote" dimColor wrap="truncate-end">
-                {[isHost ? (room.team ? `with ${room.team.name}` : '') : `${room.host}'s session`, v.policy.prompts === 'watch' ? 'watch-only' : '']
+                {[isHost ? (room.team ? `팀 ${room.team.name}` : '') : `${room.host}님의 세션`, v.policy.prompts === 'watch' ? '보기만' : '']
                   .filter(Boolean)
                   .map(f => `· ${f}`)
                   .join(' ')}
               </Text>
             </Box>
             <Box flexDirection="row" alignItems="center" gap={1} flexShrink={0}>
-              {Svg ? <Svg key="room-faces" source={stack.source} alt={`With ${people.map(p => p.name).join(', ')}`} width={stack.width} height={22} /> : null}
+              {Svg ? <Svg key="room-faces" source={stack.source} alt={`함께하는 사람: ${people.map(p => p.name).join(', ')}`} width={stack.width} height={22} /> : null}
               <Text size="caption" dimColor tabular>
-                {`${ago(room.since, now).replace(' ago', '')} · ${turns.length} turn${turns.length === 1 ? '' : 's'}`}
+                {`${ago(room.since, now).replace(' 전', '')} · 요청 ${turns.length}개`}
               </Text>
             </Box>
           </Box>
@@ -14454,14 +14452,14 @@ export const register: Register = (on, options) => {
           <Box flexDirection="row" gap="xs" flexShrink={0}>
             <Button
               key="room-copy"
-              label={copied ? 'Copied ✓' : 'Copy'}
+              label={copied ? '복사됨 ✓' : '복사'}
               variant="secondary"
               onPress={press => void copyLink($, room.url, press.surface).then(() => flashCopied($))}
             />
             {isHost ? (
               <Button
                 key="room-invite"
-                label={signedIn ? 'Invite' : 'Sign in to invite'}
+                label={signedIn ? '초대' : '로그인하고 초대'}
                 variant="primary"
                 onPress={press => void pressInvite($, room.url, press.surface)}
               />
@@ -14478,7 +14476,7 @@ export const register: Register = (on, options) => {
       <Box key="room-now" flexDirection="row" gap={1}>
         {w.waitingFor ? (
           <Text color="permission" wrap="truncate-end">
-            {isHost ? `${waitingWho(w)} is waiting for your OK on ${w.waitingFor}` : `Waiting for ${room.host} to allow ${w.waitingFor}`}
+            {isHost ? `${waitingWho(w)}님이 ${w.waitingFor} 허용을 기다립니다` : `${room.host}님의 ${w.waitingFor} 허용을 기다리는 중`}
           </Text>
         ) : Client ? (
           <Box flexGrow={1} minWidth={0}>
@@ -14498,7 +14496,7 @@ export const register: Register = (on, options) => {
             />
           </Box>
         ) : (
-          <Text wrap="truncate-end">{`Claude is working for ${w.by}`}</Text>
+          <Text wrap="truncate-end">{`Claude가 ${w.by}님의 요청을 처리하는 중`}</Text>
         )}
       </Box>
     ) : null
@@ -14506,12 +14504,12 @@ export const register: Register = (on, options) => {
     const tabs = tabsOf(
       el,
       [
-        { id: 'people', label: 'People', count: online },
-        { id: 'chat', label: 'Chat', count: v.unread || undefined, news: v.unread > 0 },
-        { id: 'timeline', label: 'Timeline', count: turns.length || undefined },
-        ...(changes.length ? [{ id: 'changes' as const, label: 'Changes', count: changes.length }] : []),
-        ...(shown.length ? [{ id: 'shown' as const, label: 'Shown', count: shown.length }] : []),
-        { id: 'settings', label: newer || pinRefused || paneRefused ? 'Settings ●' : 'Settings' },
+        { id: 'people', label: '참여자', count: online },
+        { id: 'chat', label: '채팅', count: v.unread || undefined, news: v.unread > 0 },
+        { id: 'timeline', label: '타임라인', count: turns.length || undefined },
+        ...(changes.length ? [{ id: 'changes' as const, label: '변경', count: changes.length }] : []),
+        ...(shown.length ? [{ id: 'shown' as const, label: '보여 준 것', count: shown.length }] : []),
+        { id: 'settings', label: newer || pinRefused || paneRefused ? '설정 ●' : '설정' },
       ],
       tab,
       pick,
@@ -14521,28 +14519,28 @@ export const register: Register = (on, options) => {
     // teammates to invite straight into this session.
     const joinedAt = (name: string) => activity.find(a => a.kind === 'join' && a.who === name)?.ts
     const prompts = (name: string) => Math.max(activity.filter(a => a.kind === 'prompt' && a.who === name).length, turns.filter(t => t.who === name).length)
-    const roles = (p: Face) => [p.note?.includes('host') ? 'host' : '', p.note?.includes('you') ? 'you' : ''].filter(Boolean).join(' · ')
+    const roles = (p: Face) => [p.note?.split(' · ').includes('방장') ? '방장' : '', p.note?.split(' · ').includes('나') ? '나' : ''].filter(Boolean).join(' · ')
     const personRow = (p: Face) => {
       const joined = joinedAt(p.name)
       const asked = prompts(p.name)
       const doing = p.active ? (
-        <Text color={v.working?.waitingFor ? 'permission' : 'claude'}>{v.working?.waitingFor ? 'Waiting for an OK' : 'Claude is working'}</Text>
+        <Text color={v.working?.waitingFor ? 'permission' : 'claude'}>{v.working?.waitingFor ? '허용 기다리는 중' : 'Claude 작업 중'}</Text>
       ) : !p.online ? (
-        <Text dimColor>away</Text>
+        <Text dimColor>자리 비움</Text>
       ) : behind(p) ? (
-        <Text color="warning">{`on ${p.version} · update to ${latest}`}</Text>
+        <Text color="warning">{`${p.version} 사용 중 · ${latest}로 업데이트 필요`}</Text>
       ) : (
         <Text dimColor wrap="truncate-end">
           {[
-            joined && !p.note?.includes('host') ? `joined ${ago(joined, now)}` : '',
+            joined && !p.note?.split(' · ').includes('방장') ? `참여 ${ago(joined, now)}` : '',
             asked ? `${asked} prompt${asked === 1 ? '' : 's'}` : '',
-            v.everyone.some(person => person.name === p.name && trustsPerson(trusted, person)) ? 'always allowed' : '',
+            v.everyone.some(person => person.name === p.name && trustsPerson(trusted, person)) ? '항상 허용' : '',
           ]
             .filter(Boolean)
             .join(' · ')}
         </Text>
       )
-      const isYou = p.note?.includes('you')
+      const isYou = p.note?.split(' · ').includes('나')
       return (
         <Box key={`person-${p.name}`} flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
           <Box flexDirection="row" gap={1} alignItems="center" flexShrink={1} minWidth={0}>
@@ -14581,8 +14579,8 @@ export const register: Register = (on, options) => {
                 {p.name}
               </Text>
               <Text size="caption" dimColor>
-                {[roles(p), joined && !p.note?.includes('host') ? `joined ${ago(joined, now)}` : ''].filter(Boolean).join(' · ') ||
-                  (p.online ? 'here' : 'away')}
+                {[roles(p), joined && !p.note?.split(' · ').includes('방장') ? `참여 ${ago(joined, now)}` : ''].filter(Boolean).join(' · ') ||
+                  (p.online ? '접속 중' : '자리 비움')}
               </Text>
             </Box>
             <Text size="footnote">{`${asked ? `${asked} prompt${asked === 1 ? '' : 's'}` : 'No prompts yet'}${v.working?.by === p.name ? ' · Claude is working for them' : ''}`}</Text>
@@ -14608,7 +14606,7 @@ export const register: Register = (on, options) => {
     const inviteBlock =
       !isHost || !teamsNow?.account ? null : mates.length ? (
         <Box flexDirection="column" gap={1}>
-          {headingOf(el, 'Invite teammates', 'it shows in their Claude Code')}
+          {headingOf(el, '팀원 초대', '팀원의 Claude Code에 표시됩니다')}
           {mates.slice(0, 8).map(m => (
             <Box key={`mate-${m.id}`} flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
               <Box flexDirection="row" gap={1} alignItems="center" flexShrink={1} minWidth={0}>
@@ -14618,64 +14616,64 @@ export const register: Register = (on, options) => {
               {/* Invited, and still not here: asked again, it shows in their Claude
                 Code anew (and notifies them again), even if they'd set it aside. */}
               <Box flexDirection="row" gap={1} alignItems="center" flexShrink={0}>
-                {invited[m.id] ? <Text color="success">{`Invited ${ago(invited[m.id] ?? now, now)}`}</Text> : null}
+                {invited[m.id] ? <Text color="success">{`초대함 ${ago(invited[m.id] ?? now, now)}`}</Text> : null}
                 <Button
                   key={`invite-${m.id}`}
-                  label={invited[m.id] ? 'Invite again' : 'Invite'}
+                  label={invited[m.id] ? '다시 초대' : '초대'}
                   plain
                   dimColor={Boolean(invited[m.id])}
                   onPress={() =>
                     void inviteToRoom($, [m.id])
                       .then(text => $.ui.toast(text))
-                      .catch(error => $.ui.toast(`Couldn't invite: ${String(error?.message ?? error)}`))
+                      .catch(error => $.ui.toast(`초대하지 못했어요: ${String(error?.message ?? error)}`))
                   }
                 />
               </Box>
             </Box>
           ))}
-          {mates.length > 8 ? <Text dimColor>{`And ${mates.length - 8} more: /invite <name>`}</Text> : null}
+          {mates.length > 8 ? <Text dimColor>{`외 ${mates.length - 8}명: /invite <이름>`}</Text> : null}
         </Box>
       ) : (
         <Box flexDirection="column" gap={1}>
-          {headingOf(el, 'Invite teammates')}
+          {headingOf(el, '팀원 초대')}
           <Text dimColor>
             {shownTeam
-              ? `Nobody else is in ${shownTeam.name} yet. Send them its invite link; once they're in, invite them here.`
-              : 'Make a team first, then invite teammates straight into this session.'}
+              ? `아직 ${shownTeam.name}에 다른 팀원이 없습니다. 팀 초대 링크를 보내고, 팀원이 들어오면 여기서 초대할 수 있습니다.`
+              : '팀을 먼저 만들면 팀원을 이 세션으로 바로 초대할 수 있습니다.'}
           </Text>
           <Box flexDirection="row" gap={1}>
             {shownTeam && teamsNow ? (
               <Button
                 key="room-team-invite"
-                label="Copy team invite link"
+                label="팀 초대 링크 복사"
                 variant="secondary"
-                onPress={press => void copyText($, inviteUrl(teamsNow, shownTeam), 'Team invite link copied', press.surface)}
+                onPress={press => void copyText($, inviteUrl(teamsNow, shownTeam), '팀 초대 링크를 복사했어요', press.surface)}
               />
             ) : null}
-            <Button key="room-open-team" label="Team" variant="secondary" onPress={() => void openTeam($)} />
+            <Button key="room-open-team" label="팀" variant="secondary" onPress={() => void openTeam($)} />
           </Box>
         </Box>
       )
     const longest = turns.reduce((m, t) => Math.max(m, t.ms ?? 0), 0)
     // The header says the turns; these are what it doesn't.
     const stats: [string, string][] = [
-      ['Tool calls', String(calls)],
+      ['도구 실행', String(calls)],
       [
-        'Files changed',
+        '바뀐 파일',
         changes.length ? `${changes.length} · +${changes.reduce((n, c) => n + c.added, 0)} −${changes.reduce((n, c) => n + c.removed, 0)}` : '0',
       ],
-      ...(longest ? [['Longest turn', took(longest)] as [string, string]] : []),
+      ...(longest ? [['가장 긴 답', took(longest)] as [string, string]] : []),
     ]
     const peoplePage = (
       <Box flexDirection="column" gap="lg">
         <Box flexDirection="column" gap="sm">
           {people.map(personRow)}
-          {isHost && people.length <= 1 ? <Text dimColor>Nobody else here yet. The link opens this session in their Claude Code.</Text> : null}
+          {isHost && people.length <= 1 ? <Text dimColor>아직 다른 사람이 없습니다. 링크를 열면 상대의 Claude Code에서 이 세션이 열립니다.</Text> : null}
         </Box>
         {inviteBlock}
         {turns.length ? (
           <Box key="room-stats" flexDirection="column" gap="xs">
-            {label('This session')}
+            {label('이 세션')}
             {stats.map(([k, value]) => (
               <Box key={`stat-${k}`} flexDirection="row" justifyContent="space-between">
                 <Text size="footnote" dimColor>
@@ -14714,8 +14712,8 @@ export const register: Register = (on, options) => {
         ) : null}
         <Text size="footnote" dimColor>
           {turns.length
-            ? 'Hover a bar to read it; click it to go to that prompt, then ←/→ to walk.'
-            : 'No turns yet. Every prompt shows here, in the color of whoever asked.'}
+            ? '막대에 마우스를 올리면 내용이 보이고, 누르면 그 요청으로 이동합니다. ←/→ 로 앞뒤로 넘깁니다.'
+            : '아직 요청이 없습니다. 모든 요청이 요청한 사람의 색으로 여기에 표시됩니다.'}
         </Text>
         <Box flexDirection="column" gap="xs">
           {turns
@@ -14826,7 +14824,7 @@ export const register: Register = (on, options) => {
       <Box key={`chat-${c.ts}-${i}`} flexDirection="column">
         <Box flexDirection="row" gap={2} justifyContent="space-between">
           <Text weight="medium" color={colorOf(c.who)}>
-            {c.seat === v.me ? 'You' : c.who}
+            {c.seat === v.me ? '나' : c.who}
           </Text>
           <Text size="caption" dimColor tabular>
             {ago(c.ts, now)}
@@ -14840,19 +14838,19 @@ export const register: Register = (on, options) => {
         {lines.length ? (
           lines.map((l, i) => (l.chat ? chatRow(l.chat, i) : l.event ? eventRow(l.event, i) : null))
         ) : (
-          <Text dimColor>Nothing yet. Say hi: everyone here sees it, and Claude doesn't.</Text>
+          <Text dimColor>아직 아무 말도 없습니다. 인사를 남겨 보세요. 여기 있는 모두가 보지만 Claude는 보지 않습니다.</Text>
         )}
         {typingNames.length ? typingText(el, typingNames, colors) : null}
         {Input ? (
           <Input
             key={`chat-input-${chat.length}`}
-            placeholder="Message everyone (Claude doesn't read this)"
-            submitLabel="Send"
+            placeholder="모두에게 메시지 (Claude는 읽지 않아요)"
+            submitLabel="보내기"
             onInput={(value: string) => void noteTyping($, value).catch(() => {})}
             onSubmit={(value: string) => void postChat($, value)}
           />
         ) : (
-          <Text dimColor>Chat from Claude Code on desktop or in a terminal.</Text>
+          <Text dimColor>데스크톱이나 터미널의 Claude Code에서 채팅할 수 있습니다.</Text>
         )}
       </Box>
     )
@@ -14861,7 +14859,7 @@ export const register: Register = (on, options) => {
     const shownPage = (
       <Box flexDirection="column" gap={1}>
         <Text size="footnote" dimColor>
-          {isHost ? 'What Claude showed everyone' : `What ${room.host}'s Claude showed`}
+          {isHost ? 'Claude가 모두에게 보여 준 것' : `${room.host}님의 Claude가 보여 준 것`}
         </Text>
         {shownDrawn(shown)
           .reverse()
@@ -14894,32 +14892,32 @@ export const register: Register = (on, options) => {
                       {ago(item.ts, now)}
                     </Text>
                     {!isHost && !item.closed && !usedBy && item.kind !== 'widget' && item.kind !== 'link' ? (
-                      <Button key={`open-${item.key}`} label="Open" plain onPress={press => void openShown($, item, press.surface)} />
+                      <Button key={`open-${item.key}`} label="열기" plain onPress={press => void openShown($, item, press.surface)} />
                     ) : null}
                     {forwarded && !usedBy ? (
-                      <Button key={`public-${item.key}`} label="Public link" plain onPress={press => void openPublicPreview($, item, press.surface)} />
+                      <Button key={`public-${item.key}`} label="공개 링크" plain onPress={press => void openPublicPreview($, item, press.surface)} />
                     ) : null}
                     {isHost && item.kind === 'preview' && item.pid && !item.closed && !item.tcp ? (
-                      <Button key={`forward-${item.key}`} label="Allow forwarding" plain dimColor onPress={() => void allowForwarding($, item)} />
+                      <Button key={`forward-${item.key}`} label="포워딩 허용" plain dimColor onPress={() => void allowForwarding($, item)} />
                     ) : null}
                     {isHost && item.kind === 'preview' && item.pid && !item.closed ? (
-                      <Button key={`stop-${item.key}`} label="Stop" plain onPress={() => void stopPreview($, item.pid as string)} />
+                      <Button key={`stop-${item.key}`} label="중지" plain onPress={() => void stopPreview($, item.pid as string)} />
                     ) : null}
                   </Box>
                 </Box>
                 {forwarded && item.dependency === undefined && validPort(item.port) && !local?.localPort ? (
-                  <Text key={`address-${item.key}`} dimColor>{`Opens ${previewUrl(item.host, item.port, item.path, item.scheme)}${inWindow}`}</Text>
+                  <Text key={`address-${item.key}`} dimColor>{`여는 주소: ${previewUrl(item.host, item.port, item.path, item.scheme)}${inWindow}`}</Text>
                 ) : null}
                 {item.kind === 'preview' && !item.closed && item.tcp && item.dependency !== undefined && validPort(item.port) ? (
                   <Text key={`dependency-${item.key}`} dimColor>
-                    {`${isHost ? 'Shared' : 'Used'} ${dependencyFor(item.dependency)}`}
+                    {`${dependencyFor(item.dependency)} · ${isHost ? '공유 중' : '사용 중'}`}
                   </Text>
                 ) : null}
                 {forwarded && refusedHere.includes(item.pid!) ? (
                   <Text
                     key={`refused-${item.key}`}
                     color="warning"
-                  >{`${room.host}'s side refused the preview window's connection. Press Open to reconnect.`}</Text>
+                  >{`${room.host}님 쪽에서 미리보기 창 연결을 거부했습니다. 「열기」를 눌러 다시 연결하세요.`}</Text>
                 ) : null}
                 {forwarded && local?.localPort ? (
                   <Box key={`mapping-${item.key}`} flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
@@ -14927,10 +14925,10 @@ export const register: Register = (on, options) => {
                       <Text
                         dimColor
                         wrap="truncate-end"
-                      >{`${mapped ? '' : 'Last: '}localhost:${local.localPort} here → ${room.host}'s localhost:${item.port}`}</Text>
+                      >{`${mapped ? '' : '지난번: '}여기 localhost:${local.localPort} → ${room.host}님의 localhost:${item.port}`}</Text>
                     </Box>
                     <Box flexDirection="row" flexShrink={0}>
-                      <Button key={`close-${item.key}`} label="Close" plain onPress={() => void closeLocalPreview($, item.pid as string)} />
+                      <Button key={`close-${item.key}`} label="닫기" plain onPress={() => void closeLocalPreview($, item.pid as string)} />
                     </Box>
                   </Box>
                 ) : null}
@@ -14950,13 +14948,13 @@ export const register: Register = (on, options) => {
     const updatesSetting = Select
       ? settingOf(
           el,
-          'Updates',
+          '업데이트',
           <Select
             key="updates"
             value={updates ? 'auto' : 'manual'}
             options={[
-              { value: 'auto', label: 'Install by themselves' },
-              { value: 'manual', label: 'Only when I update' },
+              { value: 'auto', label: '자동 설치' },
+              { value: 'manual', label: '직접 업데이트할 때만' },
             ]}
             onSelect={(value: string) => void writeUpdates($, value === 'auto')}
           />,
@@ -14967,9 +14965,9 @@ export const register: Register = (on, options) => {
     const updatesNote = switchTo
       ? null
       : updates && liveUpdates === 'running'
-        ? 'This session updates itself: a release loads in place.'
+        ? '이 세션은 스스로 업데이트됩니다. 새 버전이 그 자리에서 적용됩니다.'
         : updates && liveUpdates === 'next'
-          ? 'From your next new session on, a release loads in place, no restart.'
+          ? '다음 새 세션부터 새 버전이 다시 시작 없이 그 자리에서 적용됩니다.'
           : null
     const versionRow = await updateRow($, el, false)
     const settingsPage = (
@@ -14978,24 +14976,24 @@ export const register: Register = (on, options) => {
         {pinRefused ? (
           <Box flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
             <Box flexShrink={1} minWidth={0}>
-              <Text dimColor>Auto mode won't let shared sessions pin themselves in the sidebar.</Text>
+              <Text dimColor>자동 모드에서는 공유 세션을 사이드바에 고정할 수 없습니다.</Text>
             </Box>
-            <Button key="allow-pin" label="Allow pinning" plain onPress={() => void allowDeskTools($)} />
+            <Button key="allow-pin" label="고정 허용" plain onPress={() => void allowDeskTools($)} />
           </Box>
         ) : null}
         {isHost || cloudSettings ? (
           <Box flexDirection="column" gap={1}>
-            {headingOf(el, 'Everyone here', cloudSettings ? 'at the cloud host' : '')}
+            {headingOf(el, '여기 있는 모두', cloudSettings ? '클라우드 세션에서' : '')}
             {Select
               ? settingOf(
                   el,
-                  'Teammates can',
+                  '팀원 권한',
                   <Select
                     key="policy-prompts"
                     value={v.policy.prompts}
                     options={[
-                      { value: 'everyone', label: 'Prompt Claude' },
-                      { value: 'watch', label: 'Only watch and chat' },
+                      { value: 'everyone', label: 'Claude에게 요청' },
+                      { value: 'watch', label: '보기와 채팅만' },
                     ]}
                     onSelect={(value: string) => void setPolicyHere($, { prompts: value === 'watch' ? 'watch' : 'everyone' })}
                   />,
@@ -15004,15 +15002,15 @@ export const register: Register = (on, options) => {
             {Select
               ? settingOf(
                   el,
-                  'Ask me before',
+                  '허용을 물어볼 범위',
                   <Select
                     key="policy-approvals"
                     // A cloud host asks about every call when told nothing: it holds your Claude sign-in.
                     value={cloudSettings && v.policy.approvals === 'none' ? 'all' : v.policy.approvals}
                     options={[
-                      { value: 'edits', label: 'Anything but reading this project' },
-                      { value: 'all', label: 'Every tool, reads too' },
-                      ...(cloudSettings ? [] : [{ value: 'none', label: 'Nothing' }]),
+                      { value: 'edits', label: '이 프로젝트 읽기 외 전부' },
+                      { value: 'all', label: '읽기를 포함한 모든 도구' },
+                      ...(cloudSettings ? [] : [{ value: 'none', label: '묻지 않음' }]),
                     ]}
                     onSelect={(value: string) => void setPolicyHere($, { approvals: value === 'all' || value === 'none' ? value : 'edits' })}
                   />,
@@ -15021,13 +15019,13 @@ export const register: Register = (on, options) => {
             {Select
               ? settingOf(
                   el,
-                  'What Claude shows',
+                  'Claude가 보여 주는 것',
                   <Select
                     key="policy-files"
                     value={v.policy.files ?? 'on'}
                     options={[
-                      { value: 'on', label: 'Goes to everyone' },
-                      { value: 'off', label: cloudSettings ? 'Stays in the cloud host' : 'Stays with me' },
+                      { value: 'on', label: '모두에게 보내기' },
+                      { value: 'off', label: cloudSettings ? '클라우드 세션에만 두기' : '나에게만' },
                     ]}
                     onSelect={(value: string) => void setPolicyHere($, { files: value === 'off' ? 'off' : 'on' })}
                   />,
@@ -15035,10 +15033,10 @@ export const register: Register = (on, options) => {
               : null}
             {(cloudSettings ? cloudTrusted : trusted).length ? (
               <Box flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
-                <Text dimColor wrap="truncate-end">{`Always allowed: ${listNames(cloudSettings ? cloudTrusted : [...new Set(trusted.map(t => t.who))])}`}</Text>
+                <Text dimColor wrap="truncate-end">{`항상 허용: ${listNames(cloudSettings ? cloudTrusted : [...new Set(trusted.map(t => t.who))])}`}</Text>
                 <Button
                   key="untrust"
-                  label="Ask again"
+                  label="다시 묻기"
                   plain
                   onPress={() => void (cloudSettings ? setCloudPolicy($, { untrust: true }) : update($, trustedA, () => []))}
                 />
@@ -15047,17 +15045,17 @@ export const register: Register = (on, options) => {
           </Box>
         ) : null}
         <Box flexDirection="column" gap={1}>
-          {headingOf(el, 'Just you', '')}
+          {headingOf(el, '내 설정', '')}
           {!isHost && Select
             ? settingOf(
                 el,
-                `${room.host}'s Claude shows`,
+                `${room.host}님의 Claude가 보여 주는 것`,
                 <Select
                   key="auto-open"
                   value={(await read($, autoOpenA)) ? 'auto' : 'ask'}
                   options={[
-                    { value: 'auto', label: 'Open it here' },
-                    { value: 'ask', label: 'Ask me first' },
+                    { value: 'auto', label: '여기서 바로 열기' },
+                    { value: 'ask', label: '먼저 묻기' },
                   ]}
                   onSelect={(value: string) => void update($, autoOpenA, () => value !== 'ask')}
                 />,
@@ -15066,43 +15064,42 @@ export const register: Register = (on, options) => {
           {!isHost && forwards && previewOpen && Select
             ? settingOf(
                 el,
-                'Previews',
+                '미리보기',
                 <Select
                   key="preview-open"
                   value={previewOpen}
                   options={[
-                    ...(desktop ? [{ value: 'pane', label: "Claude's browser, or a separate window when ports are taken" }] : []),
-                    { value: 'browser', label: 'Your browser, or a separate window when ports are taken' },
-                    { value: 'window', label: 'Always a separate window' },
+                    ...(desktop ? [{ value: 'pane', label: "Claude 브라우저, 포트가 쓰이고 있으면 별도 창" }] : []),
+                    { value: 'browser', label: '내 브라우저, 포트가 쓰이고 있으면 별도 창' },
+                    { value: 'window', label: '항상 별도 창' },
                   ]}
                   onSelect={(value: string) => void setPreviewOpen($, value)}
                 />,
               )
             : null}
-          {!isHost && forwards && windowing && !windowing.window ? <Text dimColor>{`A separate window can't open here: ${windowing.reason}.`}</Text> : null}
+          {!isHost && forwards && windowing && !windowing.window ? <Text dimColor>{`여기서는 별도 창을 열 수 없습니다: ${windowing.reason}.`}</Text> : null}
           {paneRefused ? (
             <Box flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
               <Box flexShrink={1} minWidth={0}>
                 <Text dimColor>
-                  Auto mode doesn't let the plugin open previews in Claude's browser, so they open in your browser. Allowing it adds a rule to your settings
-                  that also lets your own Claude open pages in Claude's browser without auto mode's review.
+                  자동 모드에서는 플러그인이 Claude 브라우저에 미리보기를 열 수 없어서 내 브라우저에서 열립니다. 허용하면 설정에 규칙이 하나 추가되고, 내 Claude도 자동 모드 검토 없이 Claude 브라우저에서 페이지를 열 수 있게 됩니다.
                 </Text>
               </Box>
               <Box flexShrink={0}>
-                <Button key="allow-pane" label="Allow previews in Claude" plain onPress={() => void allowPane($)} />
+                <Button key="allow-pane" label="Claude에서 미리보기 허용" plain onPress={() => void allowPane($)} />
               </Box>
             </Box>
           ) : null}
           {!isHost && Select && e.surface === 'terminal'
             ? settingOf(
                 el,
-                'Tool calls',
+                '도구 호출',
                 <Select
                   key="tool-rows"
                   value={await read($, toolRowsA)}
                   options={[
-                    { value: 'grouped', label: 'Grouped, as the terminal folds its own' },
-                    { value: 'each', label: 'Each shown, with its result' },
+                    { value: 'grouped', label: '터미널처럼 묶어서' },
+                    { value: 'each', label: '하나씩, 결과와 함께' },
                   ]}
                   onSelect={(value: string) => void update($, toolRowsA, () => (value === 'each' ? 'each' : 'grouped'))}
                 />,
@@ -15111,13 +15108,13 @@ export const register: Register = (on, options) => {
           {!isHost && Select
             ? settingOf(
                 el,
-                'Messages from my other sessions',
+                '내 다른 세션에서 온 메시지',
                 <Select
                   key="pref-relay"
                   value={prefs.relayPeers ? 'relay' : 'keep'}
                   options={[
-                    { value: 'relay', label: `Go to ${room.host}’s Claude` },
-                    { value: 'keep', label: 'Stay here' },
+                    { value: 'relay', label: `${room.host}님의 Claude로 보내기` },
+                    { value: 'keep', label: '여기에 두기' },
                   ]}
                   onSelect={(value: string) => void setPrefs($, { relayPeers: value !== 'keep' })}
                 />,
@@ -15126,14 +15123,14 @@ export const register: Register = (on, options) => {
           {Select
             ? settingOf(
                 el,
-                'Sounds',
+                '소리',
                 <Select
                   key="pref-sounds"
                   value={prefs.sounds}
                   options={[
-                    { value: 'mentions', label: 'Mentions and my turns' },
-                    { value: 'all', label: 'Those and joins' },
-                    { value: 'off', label: 'None' },
+                    { value: 'mentions', label: '멘션과 내 차례' },
+                    { value: 'all', label: '멘션, 내 차례, 참여' },
+                    { value: 'off', label: '없음' },
                   ]}
                   onSelect={(value: string) => void setPrefs($, { sounds: value === 'all' || value === 'off' ? value : 'mentions' })}
                 />,
@@ -15142,13 +15139,13 @@ export const register: Register = (on, options) => {
           {Select
             ? settingOf(
                 el,
-                'Said out loud',
+                '소리 내어 읽기',
                 <Select
                   key="pref-voice"
                   value={prefs.voice ? 'on' : 'off'}
                   options={[
-                    { value: 'off', label: 'Nothing' },
-                    { value: 'on', label: 'Joins and mentions' },
+                    { value: 'off', label: '없음' },
+                    { value: 'on', label: '참여와 멘션' },
                   ]}
                   onSelect={(value: string) => void setPrefs($, { voice: value === 'on' })}
                 />,
@@ -15157,13 +15154,13 @@ export const register: Register = (on, options) => {
           {Select
             ? settingOf(
                 el,
-                'Status line',
+                '상태 줄',
                 <Select
                   key="pref-status"
                   value={prefs.statusLine ? 'on' : 'off'}
                   options={[
-                    { value: 'off', label: 'Off' },
-                    { value: 'on', label: 'Who’s here' },
+                    { value: 'off', label: '끔' },
+                    { value: 'on', label: '접속 중인 사람' },
                   ]}
                   onSelect={(value: string) => void setPrefs($, { statusLine: value === 'on' })}
                 />,
@@ -15174,15 +15171,14 @@ export const register: Register = (on, options) => {
             <Box flexDirection="row" gap={1} alignItems="center" justifyContent="space-between">
               <Box flexShrink={1} minWidth={0}>
                 <Text dimColor>
-                  Claude Desktop runs the copy installed from your local marketplace folder, so a release loads only when you quit and reopen it. Add the
-                  marketplace from GitHub to update in place.
+                  Claude Desktop은 로컬 마켓플레이스 폴더에 설치된 사본을 실행해서, 새 버전은 앱을 종료하고 다시 열어야 적용됩니다. GitHub에서 마켓플레이스를 추가하면 바로 업데이트됩니다.
                 </Text>
               </Box>
               <Button
                 key="copy-switch"
-                label="Copy command"
+                label="명령 복사"
                 plain
-                onPress={press => void copyText($, switchTo, 'Command copied: run it in a terminal, then quit and reopen Claude', press.surface)}
+                onPress={press => void copyText($, switchTo, '명령을 복사했어요: 터미널에서 실행하고 Claude를 껐다 켜 주세요', press.surface)}
               />
             </Box>
           ) : updatesNote ? (
@@ -15194,15 +15190,15 @@ export const register: Register = (on, options) => {
           <Box flexDirection="row" gap={1} alignItems="center">
             <Button
               key="room-stop"
-              label={v.confirming === 'stop' ? 'Stop for everyone' : 'Stop sharing'}
+              label={v.confirming === 'stop' ? '모두에게 공유 끝내기' : '공유 끝내기'}
               variant={v.confirming === 'stop' ? 'primary' : 'secondary'}
               onPress={() => void confirmStop($)}
             />
-            {v.confirming === 'stop' ? <Text color="error">Press again to end the room. The link stops working.</Text> : null}
+            {v.confirming === 'stop' ? <Text color="error">한 번 더 누르면 방이 닫히고 링크도 더 이상 열리지 않습니다.</Text> : null}
           </Box>
         ) : (
           <Box flexDirection="row">
-            <Button key="room-leave" label={`Leave ${room.host}'s session`} variant="secondary" onPress={() => void closeRoom($, 'leave')} />
+            <Button key="room-leave" label={`${room.host}님 세션에서 나가기`} variant="secondary" onPress={() => void closeRoom($, 'leave')} />
           </Box>
         )}
       </Box>
@@ -15270,8 +15266,8 @@ export const register: Register = (on, options) => {
               <Text bold color={color}>
                 {invite.from.name}
               </Text>
-              <Text>{' invites you'}</Text>
-              <Text dimColor>{` · ${tidyTitle(invite.room.title)}${invites.length > 1 ? ` · ${invites.length - 1} more in Team` : ''}`}</Text>
+              <Text>{'님이 초대했습니다'}</Text>
+              <Text dimColor>{` · ${tidyTitle(invite.room.title)}${invites.length > 1 ? ` · 팀에 ${invites.length - 1}개 더` : ''}`}</Text>
             </Text>,
           ],
           [
@@ -15279,12 +15275,12 @@ export const register: Register = (on, options) => {
             takingBackNow() ? null : (
               <Button
                 key="invite-join"
-                label="Join"
+                label="참여하기"
                 variant="primary"
-                onPress={press => void joinInvited($, invite, press.surface).catch(error => $.ui.toast(`Couldn't join: ${String(error?.message ?? error)}`))}
+                onPress={press => void joinInvited($, invite, press.surface).catch(error => $.ui.toast(`참여하지 못했어요: ${String(error?.message ?? error)}`))}
               />
             ),
-            <Button key="invite-dismiss" label="Dismiss" plain dimColor onPress={() => void dropInvite($, invite.room.id)} />,
+            <Button key="invite-dismiss" label="닫기" plain dimColor onPress={() => void dropInvite($, invite.room.id)} />,
           ],
         )
       }
@@ -15297,18 +15293,18 @@ export const register: Register = (on, options) => {
       const leaving = takingBackNow() || (await closingNow($))
       return (
         <Box flexDirection="row" justifyContent="flex-end" gap={1} paddingRight={e.surface === 'terminal' ? 4 : 0}>
-          <Button key="team" label={live ? `Team · ${live} live` : 'Team'} plain dimColor={!live} onPress={() => void openTeam($)}>
-            {live ? [<Text key="name">Team </Text>, <Text key="count" bold color="claude">{`● ${live} live`}</Text>] : null}
+          <Button key="team" label={live ? `팀 · ${live}개 공유 중` : '팀'} plain dimColor={!live} onPress={() => void openTeam($)}>
+            {live ? [<Text key="name">팀 </Text>, <Text key="count" bold color="claude">{`● ${live}개 공유 중`}</Text>] : null}
           </Button>
           {leaving ? null : (
             <Button
               key="share"
-              label={teamName ? `Share with ${teamName.length > 24 ? `${teamName.slice(0, 23)}…` : teamName}` : 'Share'}
+              label={teamName ? `${teamName.length > 24 ? `${teamName.slice(0, 23)}…` : teamName}에 공유하기` : '공유하기'}
               plain
               onPress={press => {
                 void requestShare($, press.surface).catch(error => {
-                  $.ui.toast("Couldn't share")
-                  $.ui.log(`Couldn't share: ${String(error?.message ?? error)}`)
+                  $.ui.toast("공유하지 못했어요")
+                  $.ui.log(`공유하지 못했습니다: ${String(error?.message ?? error)}`)
                 })
               }}
             />
@@ -15331,7 +15327,7 @@ export const register: Register = (on, options) => {
     const liveMark = live ? null : (
       <Box key="live" flexDirection="row" gap={1} alignItems="center" flexShrink={0}>
         <Text weight="semibold" color="warning">
-          Reconnecting
+          다시 연결 중
         </Text>
       </Box>
     )
@@ -15349,16 +15345,16 @@ export const register: Register = (on, options) => {
             <Text bold color={color}>
               {approving.who}
             </Text>
-            <Text>{' wants Claude to run '}</Text>
+            <Text>{'님이 Claude에게 실행 요청: '}</Text>
             <Text bold>{approving.what}</Text>
-            {approving.more ? <Text dimColor>{` · ${approving.more} more waiting`}</Text> : null}
+            {approving.more ? <Text dimColor>{` · ${approving.more}개 더 대기 중`}</Text> : null}
           </Text>,
         ],
         [
           ...(approving.extent ? [<Button key="approve-whole" label={approving.extent} plain dimColor onPress={() => void openRoom($)} />] : []),
-          <Button key="approve-once" label="Allow once" variant="primary" onPress={() => answerBandAsk(approving.id, 'Allow once')} />,
-          <Button key="approve-always" label={approving.always} plain onPress={() => answerBandAsk(approving.id, approving.always)} />,
-          <Button key="approve-no" label="Decline" plain dimColor onPress={() => answerBandAsk(approving.id, 'Decline')} />,
+          <Button key="approve-once" label="이번만 허용" variant="primary" onPress={() => answerBandAsk(approving.id, 'Allow once')} />,
+          <Button key="approve-always" label={answerLabel(approving.always)} plain onPress={() => answerBandAsk(approving.id, approving.always)} />,
+          <Button key="approve-no" label="거절" plain dimColor onPress={() => answerBandAsk(approving.id, 'Decline')} />,
         ],
       )
     }
@@ -15385,12 +15381,12 @@ export const register: Register = (on, options) => {
             ) : (
               <Text key="words">{cloudAsk.what}</Text>
             )}
-            {cloudAsks.length > 1 ? <Text dimColor>{` · ${cloudAsks.length - 1} more waiting`}</Text> : null}
+            {cloudAsks.length > 1 ? <Text dimColor>{` · ${cloudAsks.length - 1}개 더 대기 중`}</Text> : null}
           </Text>,
         ],
         [
-          <Button key="cloud-yes" label={yes} variant="primary" onPress={() => void answerCloudAsk($, cloudAsk.id, yes)} />,
-          <Button key="cloud-not-now" label="Not now" plain dimColor onPress={() => void answerCloudAsk($, cloudAsk.id, 'Not now')} />,
+          <Button key="cloud-yes" label={answerLabel(yes)} variant="primary" onPress={() => void answerCloudAsk($, cloudAsk.id, yes)} />,
+          <Button key="cloud-not-now" label="나중에" plain dimColor onPress={() => void answerCloudAsk($, cloudAsk.id, 'Not now')} />,
         ],
       )
     }
@@ -15403,18 +15399,18 @@ export const register: Register = (on, options) => {
             <Text bold color={color}>
               {cloudAsk.who}
             </Text>
-            <Text>{' wants the cloud host to run '}</Text>
+            <Text>{'님이 클라우드 세션에 실행 요청: '}</Text>
             <Text bold>{cloudAsk.what}</Text>
-            {cloudAsks.length > 1 ? <Text dimColor>{` · ${cloudAsks.length - 1} more waiting`}</Text> : null}
+            {cloudAsks.length > 1 ? <Text dimColor>{` · ${cloudAsks.length - 1}개 더 대기 중`}</Text> : null}
           </Text>,
         ],
         [
           ...(cloudAsk.extent ? [<Button key="cloud-whole" label={cloudAsk.extent} plain dimColor onPress={() => void openRoom($)} />] : []),
-          <Button key="cloud-once" label="Allow once" variant="primary" onPress={() => void answerCloudAsk($, cloudAsk.id, 'Allow once')} />,
+          <Button key="cloud-once" label="이번만 허용" variant="primary" onPress={() => void answerCloudAsk($, cloudAsk.id, 'Allow once')} />,
           ...(cloudAsk.always
-            ? [<Button key="cloud-always" label={cloudAsk.always} plain onPress={() => void answerCloudAsk($, cloudAsk.id, cloudAsk.always)} />]
+            ? [<Button key="cloud-always" label={answerLabel(cloudAsk.always)} plain onPress={() => void answerCloudAsk($, cloudAsk.id, cloudAsk.always)} />]
             : []),
-          <Button key="cloud-no" label="Decline" plain dimColor onPress={() => void answerCloudAsk($, cloudAsk.id, 'Decline')} />,
+          <Button key="cloud-no" label="거절" plain dimColor onPress={() => void answerCloudAsk($, cloudAsk.id, 'Decline')} />,
         ],
       )
     }
@@ -15450,8 +15446,8 @@ export const register: Register = (on, options) => {
           </Text>,
         ],
         [
-          <Button key="host-ask-yes" label={hostAskYes(hostAsk)} variant="primary" onPress={() => answerHostAsk(hostAsk.id, 'yes')} />,
-          <Button key="host-ask-no" label="Not now" plain dimColor onPress={() => answerHostAsk(hostAsk.id, 'no')} />,
+          <Button key="host-ask-yes" label={answerLabel(hostAskYes(hostAsk))} variant="primary" onPress={() => answerHostAsk(hostAsk.id, 'yes')} />,
+          <Button key="host-ask-no" label="나중에" plain dimColor onPress={() => answerHostAsk(hostAsk.id, 'no')} />,
         ],
       )
     }
@@ -15461,13 +15457,13 @@ export const register: Register = (on, options) => {
 
     const stack = stackSvg(people, { size: 24, max: 5 })
     const here = people.filter(p => p.online).length
-    const roomLabel = v.unread ? `Room · ${v.unread} new` : 'Room'
+    const roomLabel = v.unread ? `방 · 새 메시지 ${v.unread}` : '방'
     // What the room is, after the state word: one line of dim facts, the
     // first thing a narrow row cuts.
     const facts = [
-      isHost ? (v.room?.team ? `with ${v.room.team.name}` : '') : `${v.room?.host}'s session`,
-      v.policy.prompts === 'watch' ? 'watch-only' : '',
-      `${here} here`,
+      isHost ? (v.room?.team ? `${v.room.team.name}에 공유` : '') : `${v.room?.host}님 세션`,
+      v.policy.prompts === 'watch' ? '보기만' : '',
+      `${here}명 접속 중`,
     ]
       .filter(Boolean)
       .join(' · ')
@@ -15508,15 +15504,15 @@ export const register: Register = (on, options) => {
       row(
         [
           liveMark,
-          Svg ? <Svg key="faces" source={stack.source} alt={`With ${people.map(p => p.name).join(', ')}`} width={stack.width} height={24} /> : null,
+          Svg ? <Svg key="faces" source={stack.source} alt={`함께: ${people.map(p => p.name).join(', ')}`} width={stack.width} height={24} /> : null,
           live ? (
             <Text key="what" bold>
-              {isHost ? 'Sharing' : 'Joined'}
+              {isHost ? '공유 중' : '참여 중'}
             </Text>
           ) : null,
           stopping ? (
             <Text key="now" color="error" wrap="truncate-end">
-              Press again to end the room for everyone
+              한 번 더 누르면 모두에게 방이 닫힙니다
             </Text>
           ) : (
             (typingNow ??
@@ -15532,7 +15528,7 @@ export const register: Register = (on, options) => {
           invite ? (
             <Button
               key="invite-open"
-              label={`${invite.from.name} invites you${invites.length > 1 ? ` · ${invites.length}` : ''}`}
+              label={`${invite.from.name}님의 초대${invites.length > 1 ? ` · ${invites.length}` : ''}`}
               plain
               onPress={() => void openTeam($, 'live')}
             >
@@ -15540,26 +15536,26 @@ export const register: Register = (on, options) => {
                 <Text key="who" bold color={colorFor(invite.from.name)}>
                   {invite.from.name}
                 </Text>,
-                <Text key="what" color="claude">{` invites you${invites.length > 1 ? ` · ${invites.length}` : ''}`}</Text>,
+                <Text key="what" color="claude">{`님의 초대${invites.length > 1 ? ` · ${invites.length}` : ''}`}</Text>,
               ]}
             </Button>
           ) : null,
-          pin ? <Button key="band-allow-pin" label="Pin" plain onPress={() => void allowDeskTools($)} /> : null,
-          openable ? <Button key="open-preview" label="Open preview" plain onPress={press => void openShown($, openable, press.surface)} /> : null,
+          pin ? <Button key="band-allow-pin" label="고정" plain onPress={() => void allowDeskTools($)} /> : null,
+          openable ? <Button key="open-preview" label="미리보기 열기" plain onPress={press => void openShown($, openable, press.surface)} /> : null,
           <Button key="room" label={roomLabel} plain onPress={() => void openRoom($)}>
-            {v.unread ? [<Text key="name">Room </Text>, <Text key="count" bold color="claude">{`· ${v.unread} new`}</Text>] : null}
+            {v.unread ? [<Text key="name">방 </Text>, <Text key="count" bold color="claude">{`· 새 메시지 ${v.unread}`}</Text>] : null}
           </Button>,
           isHost && !stopping && !invite ? (
-            <Button key="copy" label="Copy link" plain onPress={press => void (v.room ? copyLink($, v.room.url, press.surface) : undefined)} />
+            <Button key="copy" label="링크 복사" plain onPress={press => void (v.room ? copyLink($, v.room.url, press.surface) : undefined)} />
           ) : null,
           isHost ? (
             stopping ? (
-              <Button key="stop-sharing" label="Stop for everyone?" variant="primary" onPress={() => void confirmStop($)} />
+              <Button key="stop-sharing" label="모두에게 끝낼까요?" variant="primary" onPress={() => void confirmStop($)} />
             ) : (
-              <Button key="stop-sharing" label="Stop" plain onPress={() => void confirmStop($)} />
+              <Button key="stop-sharing" label="공유 끝내기" plain onPress={() => void confirmStop($)} />
             )
           ) : (
-            <Button key="leave" label="Leave" plain onPress={() => void closeRoom($, 'leave')} />
+            <Button key="leave" label="나가기" plain onPress={() => void closeRoom($, 'leave')} />
           ),
         ],
       ),
@@ -15594,20 +15590,20 @@ function whoCard(el: UI, surface: RenderSurface, v: View, turns: ShareTurn[], no
   const asked = (name: string) => turns.filter(t => t.who === name).length
   const doing = (p: Face) =>
     v.working?.by === p.name
-      ? 'Claude is working for them'
+      ? 'Claude가 작업 중'
       : !p.online
-        ? 'away'
-        : [p.note?.includes('host') ? 'hosting' : 'here', asked(p.name) ? `${asked(p.name)} prompt${asked(p.name) === 1 ? '' : 's'}` : '']
+        ? '자리 비움'
+        : [p.note?.split(' · ').includes('방장') ? '방장' : '접속 중', asked(p.name) ? `요청 ${asked(p.name)}개` : '']
             .filter(Boolean)
             .join(' · ')
   return (
     <Box flexDirection="column" gap="sm" borderStyle="round" borderDimColor paddingX={1}>
       <Box flexDirection="row" alignItems="center" gap={1}>
         <Text size="caption" weight="semibold" color="claude">
-          Live
+          공유 중
         </Text>
         <Text size="caption" dimColor tabular>
-          {`· ${ago(room.since, now).replace(' ago', '')}`}
+          {`· ${ago(room.since, now).replace(' 전', '')}`}
         </Text>
       </Box>
       <Box flexDirection="column">
@@ -15615,7 +15611,7 @@ function whoCard(el: UI, surface: RenderSurface, v: View, turns: ShareTurn[], no
           {tidyTitle(room.title)}
         </Text>
         <Text size="footnote" dimColor>
-          {`${v.mode === 'host' ? 'Your session' : `${room.host}'s session`} · ${here.length} of ${people.length} here`}
+          {`${v.mode === 'host' ? '내 세션' : `${room.host}님 세션`} · ${people.length}명 중 ${here.length}명 접속 중`}
         </Text>
       </Box>
       <Box flexDirection="column" gap="xs">
@@ -15632,18 +15628,32 @@ function whoCard(el: UI, surface: RenderSurface, v: View, turns: ShareTurn[], no
         ))}
       </Box>
       <Box flexDirection="row" alignItems="center" gap={1}>
-        {Svg ? <Svg source={stack.source} alt={`Here: ${here.map(p => p.name).join(', ')}`} width={stack.width} height={24} /> : null}
+        {Svg ? <Svg source={stack.source} alt={`접속 중: ${here.map(p => p.name).join(', ')}`} width={stack.width} height={24} /> : null}
         <Button key="who-room" variant="primary" onPress={open}>
-          Open the Room
+          방 열기
         </Button>
       </Box>
     </Box>
   )
 }
 
+// 답 값(영어, 여러 곳 · 다른 사람 플러그인이 글자로 맞춰 봄)을 화면에 보일 한국어로(11/27).
+function answerLabel(value: string): string {
+  if (value === 'Allow once') return '이번만 허용'
+  if (value === 'Decline') return '거절'
+  if (value === 'Not now') return '나중에'
+  if (value === 'Share') return '공유하기'
+  if (value === 'Share too') return '함께 공유'
+  if (value === 'Allow') return '허용'
+  const always = /^Always allow (.+)$/.exec(value)
+  if (always) return `${always[1]}님 요청은 항상 허용`
+  return value
+}
+
 // One person in several sessions is still one name.
+// 이름마다 「님」(11/27, 한국 회사 관행): 「Alex님, Riley님 외 1명」.
 function listNames(all: string[]): string {
-  const names = [...new Set(all)]
-  if (names.length <= 2) return names.join(' and ')
-  return `${names.slice(0, 2).join(', ')} and ${names.length - 2} more`
+  const names = [...new Set(all)].map(n => `${n}님`)
+  if (names.length <= 2) return names.join(', ')
+  return `${names.slice(0, 2).join(', ')} 외 ${names.length - 2}명`
 }

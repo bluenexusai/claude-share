@@ -172,13 +172,13 @@ export function dependencyOf(value: unknown): number | true | undefined {
 export const dependencyTitle = (port: number, label?: string) => `localhost:${port}${label ? ` (${label})` : ''}`
 
 /** Whose it is: "for the preview of localhost:3000", or "for previews" when that page isn't known. */
-export const dependencyFor = (dependency: number | true) => (dependency === true ? 'for previews' : `for the preview of localhost:${dependency}`)
+export const dependencyFor = (dependency: number | true) => (dependency === true ? '미리보기용' : `localhost:${dependency} 미리보기용`)
 
 /** "localhost:3610 · convex-local-backend" */
 export const serviceName = (s: { port: number; label?: string }) => `localhost:${s.port}${s.label ? ` · ${s.label}` : ''}`
 
 /** Every one of them, in a sentence: "a", "a and b", "a, b and c". */
-export const everyName = (names: readonly string[]) => (names.length > 2 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names.join(' and '))
+export const everyName = (names: readonly string[]) => (names.length > 2 ? `${names.slice(0, -1).join(', ')}, ${names.at(-1)}` : names.join(', '))
 
 /**
  * What discovery found, by service: one process (its pid, where discovery
@@ -204,7 +204,7 @@ export function everyService(services: readonly (readonly { port: number; label?
   const names = services.map(
     service => `localhost:${everyName(service.map(s => String(s.port)))}${labels && service[0]?.label ? ` · ${service[0].label}` : ''}`,
   )
-  return names.length > 1 && services.some(service => service.length > 1) ? `${names.slice(0, -1).join(', ')}, and ${names.at(-1)}` : everyName(names)
+  return names.length > 1 && services.some(service => service.length > 1) ? `${names.slice(0, -1).join(', ')}, ${names.at(-1)}` : everyName(names)
 }
 
 /**
@@ -242,5 +242,5 @@ export function questionsOf<T>(services: readonly (readonly T[])[]): T[][] {
  */
 export function shareTooWords(page: number, related: readonly { port: number; label?: string }[]): string {
   const labels = [...new Set(related.map(s => s.label ?? '').filter(label => label && label !== 'unknown'))]
-  return `Share localhost:${everyName(related.map(s => String(s.port)))} too? ${labels.length ? `${everyName(labels)}, beside` : 'Found beside'} localhost:${page}`
+  return `localhost:${everyName(related.map(s => String(s.port)))}도 공유할까요? ${labels.length ? `${everyName(labels)}, 사용하는 페이지` : '사용하는 페이지'} localhost:${page}`
 }

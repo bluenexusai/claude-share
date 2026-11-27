@@ -80,7 +80,7 @@ test("a request reaches the host's localhost as from the preview's own page", ()
 
 test("the plugin's own pages: their head, nothing unescaped", () => {
   expect(JSON.parse(pageHead(503))).toEqual({ status: 503, headers: [['content-type', 'text/html; charset=utf-8']] })
-  const page = proxyPage('The preview is busy', 'Sam <b>& co</b> "here"')
+  const page = proxyPage('미리보기 요청이 너무 많아요', 'Sam <b>& co</b> "here"')
   expect(page.startsWith('<!doctype html>')).toBe(true)
   expect(page).toContain('Sam &lt;b&gt;&amp; co&lt;/b&gt; &quot;here&quot;')
   expect(page).not.toContain('\n')

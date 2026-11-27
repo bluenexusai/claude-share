@@ -1552,7 +1552,7 @@ export const tunnels = (asked: ReturnType<typeof world>) =>
   asked.spawned.filter(s => s.argv.at(-1)?.endsWith('/relay/local-preview.mts')).map(s => JSON.parse(s.input!))
 
 // What a window Open says when its tunnel didn't start here.
-export const tunnelUnstarted = (port: number) => `Couldn't reach Sam's localhost:${port} for the preview window. Press Open preview to try again.`
+export const tunnelUnstarted = (port: number) => `미리보기 창에서 Sam님의 localhost:${port}에 연결하지 못했어요. 미리보기 열기를 눌러 다시 시도해 주세요.`
 
 // The room refusing a window tunnel for good: refused once, the page's next
 // ask starts it again by itself; that one refused too, it waits for an Open.
@@ -1589,7 +1589,7 @@ export const hostProfilePath = async () => `/home/scott/.claude/shared-session/b
 export const looks = (asked: ReturnType<typeof world>, profile: string) =>
   asked.spawned.filter(s => s.input?.startsWith('# shared-session: is the preview window open') && s.input.includes(`held '${profile}'`)).length
 
-export const LOOK_UNKNOWN = "Couldn't tell whether the preview window is open (the look at its profile ended with code 1). Press Open preview again."
+export const LOOK_UNKNOWN = '미리보기 창이 열려 있는지 확인하지 못했어요: 프로필 확인 실패(코드 1). 「미리보기 열기」를 다시 눌러 주세요.'
 
 // Firefox: the same window and proxy, its proxy in the profile's settings.
 export const FIREFOX = '/Applications/Firefox.app'
@@ -1702,7 +1702,7 @@ export const DISCOVERED = {
 
 // The question in the row now: its words, as drawn.
 export const hostAsked = async (ui: { find: (q: { type: string; text: RegExp }) => Promise<{ text?: string } | undefined> }) =>
-  (await ui.find({ type: 'Text', text: /^Share localhost:.* too\? |^Let guests open |^Share localhost:.* with the room\?/ }))?.text
+  (await ui.find({ type: 'Text', text: /^localhost:.*도 공유할까요\? |^손님이 localhost:.* 주소를 그대로 열 수 있게 할까요\?|^방에 .* 공유할까요\?/ }))?.text
 
 export const NEEDS = {
   3610: { state: 'done', platform: 'darwin', target: { port: 3610, label: 'convex-local-backend', web: 'yes', devtools: false }, related: [] },

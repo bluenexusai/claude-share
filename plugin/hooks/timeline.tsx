@@ -11,7 +11,7 @@ type State = { cursor: number; hover: number | null }
 
 const BARS = '▁▂▃▄▅▆▇█'
 const bar = (seconds: number | null) => (seconds === null ? '·' : BARS[Math.min(BARS.length - 1, Math.round(Math.log2(1 + seconds / 3)))]!)
-const took = (s: number) => (s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`)
+const took = (s: number) => (s < 60 ? `${s}초` : `${Math.floor(s / 60)}분 ${s % 60}초`)
 
 let latest: Props = { turns: [], claude: '', modern: false }
 
@@ -55,7 +55,7 @@ const Timeline: ClientModule<Props, State> = (props, surface) => {
   const longest = Math.max(0, ...props.turns.map(t => t.seconds ?? 0))
   const strong = props.modern ? { weight: 'semibold' as const } : { bold: true }
   const steady = props.modern ? { tabular: true } : {}
-  if (!turn) return <Text dimColor>No turns yet.</Text>
+  if (!turn) return <Text dimColor>아직 요청이 없습니다.</Text>
   return (
     <Box flexDirection="column">
       <Box flexDirection="row">

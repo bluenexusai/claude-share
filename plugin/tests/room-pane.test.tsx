@@ -83,7 +83,7 @@ test('the Timeline has every turn, in the color of who asked, and how long each 
   await ui.press({ key: 'tab-timeline' })
   expect(await ui.find({ in: 'timeline', type: 'Text', text: 'Alex' })).toBeDefined()
   expect(await ui.find({ in: 'timeline', text: /turn 2 of 2 · running/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: '41s' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: '41초' })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: ' Also cover the 503 path' })).toBeDefined()
   await ui.unmount()
 })
@@ -147,7 +147,7 @@ test("a reply shows the room's reactions and who saw it, and a press adds mine f
     })
     expect(JSON.stringify(await reply.drawn())).toContain('"type":"engine"')
     expect((await reply.find({ key: 'react-👍' }))?.props.label).toBe('👍 1')
-    expect(await reply.find({ type: 'Text', text: 'Alex saw this' })).toBeDefined()
+    expect(await reply.find({ type: 'Text', text: '본 사람: Alex' })).toBeDefined()
     expect(Boolean(await reply.find({ type: 'Svg' }))).toBe(surface === 'desktop')
     await reply.unmount()
   }
@@ -199,7 +199,7 @@ test('/who answers with a card: everyone, what each is doing, and the Room a pre
   const asked = world(on, { people: ROOM_PEOPLE })
   await joinWith($, asked)
   const said = await $.command.run({ command: 'who', args: '' } as never)
-  expect((said as { text: string }).text).toMatch(/In Sam's session: Sam, scott and 1 more here/)
+  expect((said as { text: string }).text).toMatch(/Sam님 세션에 참여 중: 접속 중 Sam님, scott님 외 1명/)
   const card = await $.ui.mount({
     plugin: 'shared-session',
     surface: 'desktop',

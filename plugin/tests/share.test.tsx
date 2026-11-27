@@ -40,8 +40,8 @@ test('a session that is not shared shows Share, and Team beside it', async ($, o
     const ui = await $.ui.mount(band(surface))
     const share = await ui.find({ key: 'share' })
     expect(share?.type).toBe('Button')
-    expect(share?.props.label).toBe('Share')
-    expect((await ui.find({ key: 'team' }))?.props.label).toBe('Team')
+    expect(share?.props.label).toBe('공유하기')
+    expect((await ui.find({ key: 'team' }))?.props.label).toBe('팀')
     expect(await ui.findAll({ type: 'Button' })).toHaveLength(2)
     await ui.unmount()
   }
@@ -52,14 +52,14 @@ test('Share asks first what teammates can do; Only watch and chat shares a room 
   const ui = await $.ui.mount(band('desktop'))
   await ui.press({ key: 'share' })
   expect(asked).not.toContain('POST /api/rooms')
-  expect((await ui.find({ key: 'share-prompt' }))?.props.label).toBe('Prompt Claude')
-  expect((await ui.find({ key: 'share-watch' }))?.props.label).toBe('Only watch and chat')
+  expect((await ui.find({ key: 'share-prompt' }))?.props.label).toBe('Claude에게 요청')
+  expect((await ui.find({ key: 'share-watch' }))?.props.label).toBe('보기와 채팅만')
   await ui.press({ key: 'share-watch' })
   await asked.clock.advance(200)
   expect(asked).toContain('POST /api/rooms')
   expect(asked.posted[0]).toMatchObject({ type: 'policy', body: { prompts: 'watch', approvals: 'edits', files: 'on' } })
-  expect(asked.toasted).toContain('Sharing, watch-only · link copied')
-  expect(asked.logged).toContain('Sharing, watch-only. Anyone with this link can join and watch this session: http://localhost:8787/s/room0000000000000002')
+  expect(asked.toasted).toContain('공유 중 (보기만) · 링크를 복사했어요')
+  expect(asked.logged).toContain('공유합니다 (보기만). 링크가 있는 사람은 누구나 참여해서 볼 수 있습니다: http://localhost:8787/s/room0000000000000002')
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
   // Prompt Claude shares as before: no policy sent.
   const before = asked.posted.length
@@ -81,7 +81,7 @@ test('with earlier prompts, Only watch and chat then asks about them, and the ro
   await pane.press({ key: 'room-share' })
   await pane.press({ key: 'share-watch' })
   expect(asked).not.toContain('POST /api/rooms')
-  expect(await pane.find({ type: 'Text', text: /They can watch and chat, not prompt Claude/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /보고 채팅할 수는 있지만 Claude에게 요청할 수는 없습니다/ })).toBeDefined()
   await pane.press({ key: 'share-all' })
   await asked.clock.advance(200)
   expect(asked.posted[0]).toMatchObject({ type: 'policy', body: { prompts: 'watch' } })
@@ -105,11 +105,11 @@ for (const [traces, signedIn] of [
     const pane = await $.ui.mount(roomPane())
     await pane.press({ key: 'room-share' })
     await asked.clock.advance(200)
-    expect(await pane.find({ type: 'Text', text: /will see it live/ })).toBeDefined()
-    expect(Boolean(await pane.find({ type: 'Text', text: /This server keeps its turns: .+ can search them later\./ }))).toBe(traces && signedIn)
+    expect(await pane.find({ type: 'Text', text: /실시간으로 보입니다/ })).toBeDefined()
+    expect(Boolean(await pane.find({ type: 'Text', text: /이 서버는 대화 기록을 보관합니다\. 나중에 .+ 검색할 수 있습니다\./ }))).toBe(traces && signedIn)
     await pane.press({ key: 'share-cancel' })
     const said = (await $.command.run({ command: 'share-session', args: '' } as never)) as { text: string }
-    expect(said.text.includes('This server keeps its turns')).toBe(traces && signedIn)
+    expect(said.text.includes('이 서버는 대화 기록을 보관합니다')).toBe(traces && signedIn)
     await $.command.run({ command: 'stop-sharing', args: '' } as never)
   })
 }
@@ -118,7 +118,7 @@ test('/share-session watch shares watch-only at once', async ($, on) => {
   const asked = world(on)
   const said = await $.command.run({ command: 'share-session', args: 'watch' } as never)
   expect(said).toEqual({
-    text: 'Sharing this session, watch-only: teammates watch and chat, and only you prompt Claude. Anyone with this link can join and watch this session: http://localhost:8787/s/room0000000000000002',
+    text: '이 세션을 공유합니다. 보기만: 팀원은 보고 채팅만 하고, Claude에게 요청할 수 있는 사람은 나뿐입니다. 링크가 있는 사람은 누구나 참여해서 볼 수 있습니다: http://localhost:8787/s/room0000000000000002',
   })
   await asked.clock.advance(200)
   expect(asked.posted.filter(e => e.type === 'policy').map(e => e.body)).toEqual([{ prompts: 'watch', approvals: 'edits', files: 'on' }])
@@ -131,16 +131,16 @@ test('Share makes the host row; Stop sharing asks once, then ends it', async ($,
     const ui = await $.ui.mount(band(surface))
     await ui.press({ key: 'share' })
     await ui.press({ key: 'share-prompt' })
-    expect((await ui.find({ type: 'Text', text: /^Sharing$/ }))?.props.bold).toBe(true)
+    expect((await ui.find({ type: 'Text', text: /^공유 중$/ }))?.props.bold).toBe(true)
     // Nothing under way: the room's facts, dim, after the state word.
-    expect(await ui.find({ type: 'Text', text: '· 1 here' })).toBeDefined()
-    expect((await ui.find({ key: 'stop-sharing' }))?.props.label).toBe('Stop')
+    expect(await ui.find({ type: 'Text', text: '· 1명 접속 중' })).toBeDefined()
+    expect((await ui.find({ key: 'stop-sharing' }))?.props.label).toBe('공유 끝내기')
     // Desktop draws the live dot and faces as vector art; the terminal, letters.
     expect(Boolean(await ui.find({ type: 'Svg' }))).toBe(surface === 'desktop')
     expect(await ui.find({ key: 'copy' })).toBeDefined()
     await ui.press({ key: 'stop-sharing' })
-    expect((await ui.find({ key: 'stop-sharing' }))?.props.label).toBe('Stop for everyone?')
-    expect(await ui.find({ type: 'Text', text: /ends the room for everyone|end the room for everyone/ })).toBeDefined()
+    expect((await ui.find({ key: 'stop-sharing' }))?.props.label).toBe('모두에게 끝낼까요?')
+    expect(await ui.find({ type: 'Text', text: /모두에게 방이 닫힙니다/ })).toBeDefined()
     await ui.press({ key: 'stop-sharing' })
     expect(await ui.find({ key: 'share' })).toBeDefined()
     await ui.unmount()
@@ -160,9 +160,9 @@ test('a link typed in Desktop joins, and the row names the host', async ($, on) 
   expect(asked).toContain('POST /api/rooms/room0000000000000001/join')
   for (const surface of SURFACES) {
     const ui = await $.ui.mount(band(surface))
-    expect((await ui.find({ type: 'Text', text: /^Joined$/ }))?.props.bold).toBe(true)
-    expect(await ui.find({ type: 'Text', text: "· Sam's session · 3 here" })).toBeDefined()
-    expect((await ui.find({ key: 'room' }))?.props.label).toBe('Room')
+    expect((await ui.find({ type: 'Text', text: /^참여 중$/ }))?.props.bold).toBe(true)
+    expect(await ui.find({ type: 'Text', text: '· Sam님 세션 · 3명 접속 중' })).toBeDefined()
+    expect((await ui.find({ key: 'room' }))?.props.label).toBe('방')
     expect(await ui.find({ key: 'leave' })).toBeDefined()
     await ui.unmount()
   }
@@ -191,7 +191,7 @@ test('with the host here, a guest prompt goes to the room', async ($, on) => {
 // (413): here, any whose words start so.
 const tooBig = (event: { body: Record<string, unknown> }) => String(event.body.text ?? '').startsWith('Too big:')
 
-const TOO_LARGE_SAID = 'A message was too large to send to the room.'
+const TOO_LARGE_SAID = '메시지가 너무 커서 방에 보내지 못했어요.'
 
 test("a guest's message the room refuses as too large is dropped and said once: what came after it goes, and it's never sent again", async ($, on) => {
   const asked = world(on, { tooLarge: tooBig })
@@ -254,7 +254,7 @@ test("a prompt the room refuses as too large ends its turn here, saying so, and 
   expect(await within(asked.clock, () => ended, 5_000)).toBe(true)
   await $.turn.complete({ turnId: 'mine', isAborted: false, durationMs: 0, reason: 'answer' } as never)
   expect(own).toBe(0)
-  expect(said.join('')).toBe("This was too large to send to **Sam**'s session, so it didn't go to Claude.")
+  expect(said.join('')).toBe('너무 커서 **Sam**님 세션으로 보내지 못했고, Claude에게 가지 않았습니다.')
   expect(asked.posted.filter(e => e.type === 'prompt')).toEqual([])
   // A turn of the host's after it plays here as it comes.
   polled.push({
@@ -283,7 +283,7 @@ test("a teammate's prompt that another session sent them shows its words and whe
   for (const surface of SURFACES) {
     const ui = await $.ui.mount({ ...ROW(text, { kind: 'plugin', name: 'shared-session', asUser: true }), surface })
     expect((await ui.find({ type: 'Text', text: 'Kyle' }))?.props.bold).toBe(true)
-    expect(await ui.find({ type: 'Text', text: 'relayed a message from claude-share-0f' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'claude-share-0f에서 온 메시지를 전했습니다' })).toBeDefined()
     expect((await ui.find({ key: 'said' }))?.text).toBe('> Bug report from this guest\n>\n> Details below.')
     await ui.unmount()
   }
@@ -310,7 +310,7 @@ test("a teammate's prompt holding a relayed message is drawn as relayed, who pas
   world(on)
   const old = '<cross-session-message from-name="Agent composition experience">\nPlease share the raw traces from your testing.\n</cross-session-message>'
   const row = await $.ui.mount({ ...ROW(`scott: ${old}`, { kind: 'plugin', name: 'shared-session', asUser: true }), surface: 'desktop' })
-  expect(await row.find({ type: 'Text', text: 'relayed a message from Agent composition experience' })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: 'Agent composition experience에서 온 메시지를 전했습니다' })).toBeDefined()
 })
 
 test("a guest who keeps their sessions' messages here is told where it went", async ($, on) => {
@@ -498,9 +498,9 @@ test("its turn here plays the host's turn for it, the reply goes to its session 
 // permission mode classes), drops it or refuses it, its turn here ends
 // saying so; a drop's reason goes into its session too.
 for (const [status, reason, words] of [
-  ['held', undefined, "**Sam**'s Claude Code is holding this until Sam lets it in."],
-  ['dropped', 'hop-loop', "**Sam**'s Claude Code dropped this (a relay loop between sessions was cut)."],
-  ['refused', undefined, "**Sam**'s Claude Code isn't taking messages from other sessions."],
+  ['held', undefined, '**Sam**님의 Claude Code가 Sam님이 받아들일 때까지 이 메시지를 보류하고 있습니다.'],
+  ['dropped', 'hop-loop', '**Sam**님의 Claude Code가 이 메시지를 버렸습니다 (세션 사이를 맴도는 전달을 끊음).'],
+  ['refused', undefined, '**Sam**님의 Claude Code는 다른 세션의 메시지를 받지 않습니다.'],
 ] as const) {
   test(`a message the host's Claude Code ${status} ends its turn here saying so`, async ($, on) => {
     const asked = await guestJoined($, on)
@@ -579,22 +579,22 @@ for (const [said, opts, words] of [
         { id: 'seat1', name: 'scott', role: 'guest', online: true },
       ],
     },
-    "Sam isn't connected right now, so this didn't reach their Claude. Send it again later.",
+    'Sam님이 지금 연결되어 있지 않아 Claude에게 전달되지 않았습니다. 나중에 다시 보내 주세요.',
   ],
   [
     'a Claude Code without a messaging socket',
     { env: { CLAUDE_CODE_MESSAGING_SOCKET: '' } },
-    "This computer can't pass this on: its Claude Code can't pass messages between sessions (that needs Claude Code 2.1.304 or later).",
+    '이 컴퓨터에서는 이 메시지를 전달할 수 없습니다: 이 컴퓨터의 Claude Code는 세션 사이에 메시지를 전달하지 못합니다(Claude Code 2.1.304 이상 필요).',
   ],
   [
     'a Claude Code older than 2.1.304',
     { env: { AI_AGENT: 'claude-code_2-1-300_agent' } },
-    "This computer can't pass this on: its Claude Code can't pass messages between sessions (that needs Claude Code 2.1.304 or later).",
+    '이 컴퓨터에서는 이 메시지를 전달할 수 없습니다: 이 컴퓨터의 Claude Code는 세션 사이에 메시지를 전달하지 못합니다(Claude Code 2.1.304 이상 필요).',
   ],
   [
     'a system without Unix sockets',
     { env: { UNAME: 'MINGW64_NT' } },
-    "This computer can't pass this on: messages between sessions are passed on only on macOS and Linux.",
+    '이 컴퓨터에서는 이 메시지를 전달할 수 없습니다: 세션 사이 메시지는 macOS와 Linux에서만 전달됩니다.',
   ],
 ] as const) {
   test(`with ${said}, a session's message isn't sent on, and it's told why`, async ($, on) => {
@@ -614,10 +614,10 @@ for (const [said, opts, words] of [
 // What the room answers: where it didn't go, the same. A refused bearer
 // takes a new seat and goes once more with it.
 for (const [said, answer, words] of [
-  ['the host not connected', { delivered: false, reason: 'offline' }, "Sam isn't connected right now, so this didn't reach their Claude. Send it again later."],
-  ['too many this minute', 429, "Too many messages went to Sam's session this minute, so this one didn't. Send it again in a minute."],
-  ['too large', 413, "This was too large to send to Sam's session, so it didn't reach their Claude."],
-  ['the room ended', 410, "The shared session has ended, so this didn't reach anyone's Claude."],
+  ['the host not connected', { delivered: false, reason: 'offline' }, 'Sam님이 지금 연결되어 있지 않아 Claude에게 전달되지 않았습니다. 나중에 다시 보내 주세요.'],
+  ['too many this minute', 429, '이번 1분 동안 Sam님의 세션에 메시지가 너무 많이 가서 이 메시지는 보내지 못했습니다. 1분 뒤에 다시 보내 주세요.'],
+  ['too large', 413, '메시지가 너무 커서 Sam님의 세션에 보내지 못했고, Claude에게 전달되지 않았습니다.'],
+  ['the room ended', 410, '공유 세션이 끝나서 누구의 Claude에게도 전달되지 않았습니다.'],
 ] as const) {
   test(`a message the room doesn't pass on (${said}) ends its turn here and is told to its session`, async ($, on) => {
     const asked = await guestJoined($, on, { peerAnswer: answer as never })
@@ -638,7 +638,7 @@ test('a message while the session is watch-only is answered to its sender, not s
   await $.prompt.submit({ text: FROM_AGENT, origin: { kind: 'peer' }, isMeta: true, wait: false } as never)
   expect(await within(asked.clock, () => asked.peerSends.length > 0, 5_000)).toBe(true)
   expect(asked.peerPosts).toEqual([])
-  expect(asked.peerSends).toEqual([{ to: AGENT_SOCKET, text: "Sam has this shared session on watch-only, so this didn't reach their Claude." }])
+  expect(asked.peerSends).toEqual([{ to: AGENT_SOCKET, text: 'Sam님이 이 공유 세션을 보기만으로 설정해 두어, 이 메시지는 Claude에 전달되지 않았습니다.' }])
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -875,20 +875,20 @@ for (const [said, opts, words] of [
   [
     'a Claude Code without a messaging socket',
     { env: { CLAUDE_CODE_MESSAGING_SOCKET: '' } },
-    "scott's computer can't take this: its Claude Code can't pass messages between sessions (that needs Claude Code 2.1.304 or later).",
+    'scott님의 컴퓨터가 이 메시지를 받을 수 없습니다: 이 컴퓨터의 Claude Code는 세션 사이에 메시지를 전달하지 못합니다(Claude Code 2.1.304 이상 필요).',
   ],
   [
     'no Node for the mailboxes',
     { mailbox: 'missing' },
-    "scott's computer couldn't take this in (it needs Node 22.18 or later), so this didn't reach their Claude.",
+    'scott님의 컴퓨터가 이 메시지를 받지 못해(Node 22.18 이상 필요) Claude에게 전달되지 않았습니다.',
   ],
   [
     "a system the helper can't run on",
     { mailbox: 'unsupported' },
-    "scott's computer can't take messages from other sessions, so this didn't reach their Claude.",
+    'scott님의 컴퓨터는 다른 세션의 메시지를 받을 수 없어 Claude에게 전달되지 않았습니다.',
   ],
-  ["a mailbox that can't open", { mailbox: { open: 409 } }, "scott's computer couldn't take this in, so it didn't reach their Claude."],
-  ['a delivery the session refuses', { mailbox: { deliver: 409 } }, "scott's Claude Code didn't take this, so it didn't reach their Claude."],
+  ["a mailbox that can't open", { mailbox: { open: 409 } }, 'scott님의 컴퓨터가 이 메시지를 받지 못해 Claude에게 전달되지 않았습니다.'],
+  ['a delivery the session refuses', { mailbox: { deliver: 409 } }, 'scott님의 Claude Code가 이 메시지를 받지 않아 Claude에게 전달되지 않았습니다.'],
 ] as const) {
   test(`with ${said}, a teammate's session's message doesn't go, and it's told why`, async ($, on) => {
     const asked = await hostPeers($, on, [peerLine('seat2', 'Alex', HANDLE_A, 'Please share the traces.', { mode: 'prompting' })], opts as never)
@@ -993,14 +993,14 @@ test('the footer and the working line say who is here and whose turn it is', asy
   await $.prompt.submit({ text: LINK, origin: { kind: 'composer' }, wait: false })
   for (const surface of SURFACES) {
     const footer = await $.ui.mount({ plugin: 'shared-session', surface, component: 'SessionMode', props: { modes: ['plan'] } })
-    expect((await footer.find({ type: 'Text' }))?.text).toBe("plan & in Sam's session with Alex")
+    expect((await footer.find({ type: 'Text' }))?.text).toBe('plan & Sam님 세션 · Alex님 참여 중')
     const spinner = await $.ui.mount({
       plugin: 'shared-session',
       surface,
       component: 'Spinner',
       props: { word: 'Working', message: null, suffix: '…', mode: 'requesting' },
     })
-    expect((await spinner.find({ type: 'Text' }))?.text).toBe("Waiting for Sam's session")
+    expect((await spinner.find({ type: 'Text' }))?.text).toBe('Sam님 세션을 기다리는 중')
     await footer.unmount()
     await spinner.unmount()
   }
@@ -1017,7 +1017,7 @@ test("a joined session hears the room through curl's stream, and never polls it"
   await $.prompt.submit({ text: LINK, origin: { kind: 'composer' }, wait: false })
   await asked.clock.advance(10)
   const footer = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'SessionMode', props: { modes: [] } })
-  expect((await footer.find({ type: 'Text' }))?.text).toBe("in Sam's session with Alex and Riley")
+  expect((await footer.find({ type: 'Text' }))?.text).toBe('Sam님 세션 · Alex님, Riley님 참여 중')
   await footer.unmount()
   expect(asked.filter(a => a.startsWith('GET ') && a.endsWith('/events'))).toEqual([])
   // The room's address and the seat's token go to curl on stdin, not in argv.
@@ -1065,15 +1065,15 @@ test('the Room shows the session on top, then its pages: people, chat, settings'
     // Names stand in a little room of their own (the pill they light up as).
     const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text?.trim())
     expect(Boolean(await ui.find({ type: 'Svg' }))).toBe(surface === 'desktop')
-    expect(await ui.find({ type: 'Text', text: /^Joined$/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /· Sam's session/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /^참여 중$/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /· Sam님의 세션/ })).toBeDefined()
     // People first: everyone, each in their own color.
     for (const name of ['Sam', 'scott', 'Alex']) expect(texts).toContain(name)
     const colors = new Set((await ui.findAll({ type: 'Text' })).filter(t => ['Sam', 'scott', 'Alex'].includes(t.text?.trim() ?? '')).map(t => t.props.color))
     expect(colors.size).toBe(3)
     // The chat: its own page, which says Claude doesn't read it.
     await ui.press({ key: 'tab-chat' })
-    expect((await ui.find({ key: 'chat-input-0' }))?.props.placeholder).toMatch(/Claude doesn't read this/)
+    expect((await ui.find({ key: 'chat-input-0' }))?.props.placeholder).toMatch(/Claude는 읽지 않아요/)
     // Settings: the guest's own, and Leave; the host's are the host's alone.
     await ui.press({ key: 'tab-settings' })
     expect(await ui.find({ key: 'room-leave' })).toBeDefined()
@@ -1097,7 +1097,7 @@ test('the host can make the session watch-only from the Room', async ($, on) => 
   await ui.select({ key: 'policy-prompts', value: 'watch' })
   await asked.clock.advance(100)
   const row = await $.ui.mount(band('desktop'))
-  expect(await row.find({ type: 'Text', text: /watch-only/ })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: /보기만/ })).toBeDefined()
   expect(asked).toContain('POST /api/rooms/room0000000000000002/events')
 })
 
@@ -1126,7 +1126,7 @@ test("a pin the app won't take is tried again, then the Room offers to allow it"
   expect(calls.filter(c => c.startsWith('set_pinned')).length).toBeGreaterThanOrEqual(3) // first, after 20 s, after a minute
   expect(await ui.find({ key: 'band-allow-pin' })).toBeDefined() // said in the row, not the transcript
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
-  expect((await pane.find({ key: 'tab-settings' }))?.props.label).toBe('Settings ●') // something to see there
+  expect((await pane.find({ key: 'tab-settings' }))?.props.label).toBe('설정 ●') // something to see there
   await pane.press({ key: 'tab-settings' })
   await pane.press({ key: 'allow-pin' })
   const settings = JSON.parse(asked.files.get('/home/scott/.claude/settings.json') ?? '{}')
