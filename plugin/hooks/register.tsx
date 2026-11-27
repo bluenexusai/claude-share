@@ -157,10 +157,12 @@ const TAIL_CHARS = 600
 // Someone writing: said again every TYPING_RESEND_MS while there's text, and
 // shown TYPING_SHOW_MS past the last time it was said (a dropped "stopped"
 // ends on its own). One older than TYPING_STALE_MS (a reconnect's catch-up)
-// isn't shown at all.
+// isn't shown at all: wide, since it's the server's clock against this one's.
 const TYPING_RESEND_MS = 3_000
 const TYPING_SHOW_MS = 6_000
-const TYPING_STALE_MS = 15_000
+const TYPING_STALE_MS = 60_000
+// A mention older than this (a reconnect's catch-up) is a toast alone: no ping, no notification, no dock.
+const MENTION_FRESH_MS = 120_000
 
 // Tools a guest's turn runs without asking the host (policy `edits`): they only read.
 const READ_ONLY = new Set([
@@ -1144,18 +1146,20 @@ let heldPrompt: { text: string; pid: string; names: string[]; timer: Timer } | n
 const queuedByHost: string[] = []
 const MID_TURN = /The user sent a new message while you were working:\n([\s\S]*?)\n\nThis is how /
 
-function midTurnWords(content: unknown): string | null {
+// 사람이 친 말이 든 첨부만 이 길로 간다(11/27): 정해진 안내문 꼴이거나, 기억해 둔 말과 글자 그대로 같을 때.
+// 「포함되는가」로 비교하면 작업 알림 같은 다른 첨부에 짧은 말(`done`)이 잘못 붙었다. 나머지 첨부는 null → 원래 길.
+// `byHost`: 방장이 대기 줄에 넣은 말로 확인됐다(그러면 「이름: 글」 꼴이어도 방장의 말).
+function midTurnWords(content: unknown): { words: string; byHost: boolean } | null {
   const shown =
     typeof content === 'string'
       ? content
       : (Array.isArray(content) ? content : []).map(b => (typeof (b as { text?: unknown })?.text === 'string' ? (b as { text: string }).text : '')).join('\n')
   if (!shown) return null
-  const kept = queuedByHost.filter(words => shown.includes(words)).sort((a, b) => b.length - a.length)[0]
-  if (kept) {
-    queuedByHost.splice(queuedByHost.indexOf(kept), 1)
-    return kept
-  }
-  return MID_TURN.exec(shown)?.[1]?.trim() || null
+  const words = MID_TURN.exec(shown)?.[1]?.trim() || (queuedByHost.includes(shown.trim()) ? shown.trim() : '')
+  if (!words) return null
+  const at = queuedByHost.indexOf(words)
+  if (at >= 0) queuedByHost.splice(at, 1)
+  return { words, byHost: at >= 0 }
 }
 // Host: every teammate's call put to the host and not answered yet, oldest
 // first. The engine checks a response's calls together (two pages fetched,
@@ -1919,6 +1923,8 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
     case 'prompt':
       if (typeof body.text === 'string') await note({ ts: event.ts, who, kind: 'prompt', text: body.text })
       if (live && !mine) await heardTyping($, event.from.seat ?? who, who, false, event.ts)
+      // 손님의 말이 방장을 부르면 대기 줄에 들어오는 지금 알린다(11/27). 예전에는 차례가 와서 턴이 시작될 때까지 몰랐다.
+      if (live && !mine && mode === 'host' && typeof body.text === 'string') await noteMention($, room, who, body.text, 'prompt', event.ts)
       if (live && !mine && mode === 'host') nudgeSidebar($)
       break
     case 'stop':
@@ -1957,7 +1963,7 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
     case 'chat':
       if (typeof body.text === 'string') {
         if (live && !mine) await heardTyping($, event.from.seat ?? who, who, false, event.ts)
-        if (live && !mine) await noteMention($, room, who, body.text, 'chat')
+        if (live && !mine) await noteMention($, room, who, body.text, 'chat', event.ts)
         const line: ShareChat = { ts: event.ts, who, seat: event.from.seat, text: body.text }
         await update($, chatA, list => [...list, line].slice(-100))
         // Unread until the chat page shows it; a toast when the Room is shut.
@@ -2005,7 +2011,7 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
         if (s.live) turnBy = by
         const turn: ShareTurn = { id: String(body.turnId ?? event.seq), who: by, prompt: prompt.replace(/\s+/g, ' ').trim().slice(0, 400), at: event.ts }
         await update($, turnsA, list => (s.live ? [...list.filter(t => t.id !== turn.id), turn].slice(-200) : list))
-        if (live && prompt) await noteMention($, room, by, prompt, 'prompt') // 방장 쪽에선 turn 이 늘 mine 이라 손님 멘션이 막혀 있었다(11/20 수정). 자기 멘션은 noteMention 이 거른다.
+        if (live && prompt) await noteMention($, room, by, prompt, 'prompt', event.ts) // 방장 쪽에선 turn 이 늘 mine 이라 손님 멘션이 막혀 있었다(11/20 수정). 자기 멘션은 noteMention 이 거른다.
         // A guest's own prompt starting on the host's Claude.
         if (live && mode === 'guest' && by === (await meIn($, room))) void cue($, 'turn')
       } else if (body.state === 'end') {
@@ -2025,6 +2031,9 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
       break
     case 'row':
       await noteRow($, room, s, body as unknown as Row, event.ts)
+      // 방장이 답 도중에 친 말의 멘션(11/27): 턴 시작이 없어 다른 길로는 알림이 안 갔다.
+      if (live && !mine && body.kind === 'user' && body.midTurn === true && typeof body.text === 'string')
+        await noteMention($, room, typeof body.who === 'string' ? body.who : who, body.text, 'prompt', event.ts)
       break
     case 'react':
       if (typeof body.key === 'string' && typeof body.emoji === 'string' && (REACTS as readonly string[]).includes(body.emoji)) {
@@ -2296,16 +2305,38 @@ async function cue($: $, kind: 'join' | 'mention' | 'turn', say?: string) {
 
 // Someone's prompt or chat line that @mentions this person: a toast, a ping,
 // and a reply begun in their empty prompt box.
-async function noteMention($: $, room: ShareRoom, who: string, text: string, where: 'prompt' | 'chat') {
+// 같은 멘션은 한 번만(11/27): 손님의 말은 대기 줄에 들어올 때와 차례가 와서 턴이 시작될 때 두 번 지나간다.
+const mentionedRecently = new Map<string, number>()
+
+// 「○○님이」 · 「Claude가」: 누가 불렀는지, 한국어 조사까지.
+function calledBy(who: string): string {
+  return who === 'Claude' || who.endsWith(' Claude') ? `${who}가` : `${who}님이`
+}
+
+async function noteMention($: $, room: ShareRoom, who: string, text: string, where: 'prompt' | 'chat', ts?: number) {
   const me = await meIn($, room)
-  if (who === me || !mentionsOf(text, [me]).length) return
-  const said = text.replace(/\s+/g, ' ').trim()
-  $.ui.toast(`${who} mentioned you${where === 'chat' ? ' in the chat' : ''}: ${said.slice(0, 120)}${said.length > 120 ? '…' : ''}`)
-  void cue($, 'mention', `${who} mentioned you`)
+  // 방 사람 모두를 놓고 본다: 첫 낱말이 겹치는 사람이 있으면 그 낱말로는 부를 수 없다.
+  const names = [...new Set([me, ...(await read($, peopleA)).map(p => p.name)])]
+  if (who === me || !mentionsOf(text, names).includes(me)) return
+  let said = text.replace(/\s+/g, ' ').trim()
+  // 방장 세션의 Claude 가 답에서 부른 것(tagFromAnswer 가 「Claude: …」로 채팅에 올림): 보낸 사람은 그 Claude.
+  if (where === 'chat' && said.startsWith('Claude: ')) {
+    who = `${who}님 세션의 Claude`
+    said = said.slice('Claude: '.length)
+  }
+  const now = await $.clock.now()
+  const key = `${who}\n${said}`
+  if (now - (mentionedRecently.get(key) ?? -Infinity) < 10 * 60_000) return
+  mentionedRecently.set(key, now)
+  for (const [k, at] of mentionedRecently) if (now - at > 10 * 60_000) mentionedRecently.delete(k)
+  $.ui.toast(`${calledBy(who)} 멘션했습니다${where === 'chat' ? '(채팅)' : ''}: ${said.slice(0, 120)}${said.length > 120 ? '…' : ''}`)
+  // 다시 연결하며 따라잡은 지난 멘션(2분 넘음)은 토스트만(11/27): 자는 동안 온 멘션마다 맥 알림 · 소리 · 독이 쏟아졌다.
+  if (ts !== undefined && now - ts > MENTION_FRESH_MS) return
+  void cue($, 'mention', `${calledBy(who)} 불렀습니다`)
   // 맥 알림 센터에도 띄운다(11/20). 초대 알림(notifyInvite)과 같은 길.
   void notifyMention($, who, said, where).catch(() => {})
   void bounceDock($).catch(() => {})
-  void $.prompt.suggest({ text: `@${who} ` }).catch(() => {})
+  if (!who.endsWith(' Claude')) void $.prompt.suggest({ text: `@${who.replace(/\s+/g, '')} ` }).catch(() => {})
   nudgeSidebar($)
 }
 
@@ -2332,12 +2363,14 @@ async function tagFromAnswer($: $, text: string) {
       .slice(0, 2)
       .join(' / ')
       .slice(0, 600)
-  const others = hit.filter(name => name !== me)
+  // 그 턴을 시킨 사람은 답을 실시간으로 보고 있으니 다시 부르지 않는다(11/27).
+  const owner = lastTurnFor
+  const others = hit.filter(name => name !== me && name !== owner)
   if (others.length) {
     const said = linesFor(others)
     if (said) await postChat($, `Claude: ${said}`)
   }
-  if (hit.includes(me)) {
+  if (hit.includes(me) && owner !== me) {
     const said = linesFor([me])
     if (said) {
       void notifyMention($, 'Claude', said, 'prompt').catch(() => {})
@@ -2351,14 +2384,34 @@ async function tagFromAnswer($: $, text: string) {
 async function notifyMention($: $, who: string, said: string, where: 'prompt' | 'chat') {
   // 시험용 세션(SHARED_SESSION_NO_BROWSER=1)은 이 컴퓨터에 아무것도 띄우지 않는다.
   if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
-  const title = `${who} 님이 멘션했습니다`
+  const title = `${calledBy(who)} 멘션했습니다`
   const body = `${where === 'chat' ? '(채팅) ' : ''}${said.slice(0, 160)}${said.length > 160 ? '…' : ''}`
+  const ran = await systemNotify($, title, body, await sessionLink($))
+  if (!ran) await $.ui.notify(body, { title }).catch(() => null)
+}
+
+// 이 데스크톱 세션을 여는 주소(11/27): 알림이나 독 아이콘을 누르면 Claude 가 이 세션으로 간다. 터미널 세션은 ''.
+async function sessionLink($: $): Promise<string> {
+  const id = ((await $.env.get('CLAUDE_CODE_HOST_SESSION_ID')) ?? '').trim()
+  return /^local_[A-Za-z0-9-]{1,64}$/.test(id) ? `claude://code/continue?session=${id}` : ''
+}
+
+// 이 컴퓨터의 알림(11/27). 맥은 「Claude 알림」 앱(~/.claude/claude-notify.app, Claude 아이콘)으로 띄워
+// 누르면 `open` 주소(이 세션)를 연다. osascript 의 알림은 「스크립트 편집기」 것이라 누르면 스크립트 편집기가 열렸다.
+// 그 앱이 없으면 osascript, 리눅스는 notify-send. 앱이 알림을 못 띄우면(꺼 둠 등) 뒤에서 osascript 로 바꿔 띄운다.
+// 앱은 누르기를 받으려고 30초 남아 있으므로 기다리지 않는다. 띄울 길이 없으면 false.
+async function systemNotify($: $, title: string, body: string, open = ''): Promise<boolean> {
   const as = (text: string) => `"${text.slice(0, 200).replace(/[\\"]/g, c => `\\${c}`)}"`
+  const osa = `osascript -e ${sq(`display notification ${as(body)} with title ${as(title)} subtitle "Shared Sessions"`)} >/dev/null 2>&1`
+  const app = ['--title', title.slice(0, 200), '--subtitle', 'Shared Sessions', '--body', body.slice(0, 400), ...(open ? ['--open', open] : [])].map(sq).join(' ')
   const ran = await sh(
     $,
     [
-      'if command -v osascript >/dev/null 2>&1; then',
-      `  osascript -e ${sq(`display notification ${as(body)} with title ${as(title)} subtitle "Shared Sessions"`)} >/dev/null 2>&1`,
+      'n="$HOME/.claude/claude-notify.app/Contents/MacOS/claude-notify"',
+      'if [ -x "$n" ]; then',
+      `  ( "$n" ${app} || ${osa} ) </dev/null >/dev/null 2>&1 &`,
+      'elif command -v osascript >/dev/null 2>&1; then',
+      `  ${osa}`,
       'elif command -v notify-send >/dev/null 2>&1; then',
       `  notify-send ${sq(title)} ${sq(body)} >/dev/null 2>&1`,
       'else',
@@ -2367,20 +2420,24 @@ async function notifyMention($: $, who: string, said: string, where: 'prompt' | 
       '',
     ].join('\n'),
   ).catch(() => null)
-  if (!ran || ran.code !== 0) await $.ui.notify(body, { title }).catch(() => null)
+  return Boolean(ran && ran.code === 0)
 }
 
 // 멘션이 오면 독에서 Claude 아이콘이 튄다(11/20). 다른 앱의 독 아이콘은 밖에서 튀게 할 수 없어
 // ~/.claude/dock-bounce.jxa.js(Claude 아이콘을 쓴 도우미)를 띄운다. 그 파일이 없거나 이미 튀는 중이면 아무것도 안 한다.
 async function bounceDock($: $) {
   if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
+  // 누르면 이 세션이 열린다(11/27). 주소가 없으면(터미널) Claude 앱만 앞으로.
+  const open = await sessionLink($)
   await sh(
     $,
     [
       'f="$HOME/.claude/dock-bounce.jxa.js"',
       '[ -f "$f" ] && command -v osascript >/dev/null 2>&1 || exit 0',
       'pgrep -f dock-bounce.jxa.js >/dev/null 2>&1 && exit 0',
-      'nohup osascript -l JavaScript "$f" >/dev/null 2>&1 &',
+      // Claude 가 이미 맨 앞이면 튀길 까닭이 없다(11/27).
+      'lsappinfo info -only bundleid "$(lsappinfo front 2>/dev/null)" 2>/dev/null | grep -q com.anthropic.claudefordesktop && exit 0',
+      `nohup osascript -l JavaScript "$f"${open ? ` ${sq(open)}` : ''} </dev/null >/dev/null 2>&1 &`,
       '',
     ].join('\n'),
   ).catch(() => null)
@@ -10434,9 +10491,9 @@ function scheduleTypingSweep($: $) {
 async function sweepTyping($: $) {
   const now = await $.clock.now()
   const all = await read($, typingA)
-  const left = Object.fromEntries(Object.entries(all).filter(([, t]) => t.until > now))
-  if (Object.keys(left).length !== Object.keys(all).length) await update($, typingA, () => left)
-  if (Object.keys(left).length) scheduleTypingSweep($)
+  const live = (list: typeof all) => Object.fromEntries(Object.entries(list).filter(([, t]) => t.until > now))
+  if (Object.keys(live(all)).length !== Object.keys(all).length) await update($, typingA, latest => live(latest))
+  if (Object.keys(live(await read($, typingA))).length) scheduleTypingSweep($)
 }
 
 // Who's writing now: each name once.
@@ -11928,22 +11985,16 @@ async function pollInvites($: $) {
 async function notifyInvite($: $, invite: ShareInvite) {
   const title = `${invite.from.name} invites you`
   const body = `${invite.room.title} · Join it from Claude Code, above the prompt`
+  const test = (await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1'
+  // 데스크톱은 이 컴퓨터의 알림이 먼저(11/27): $.ui.notify 는 「보냄」이라 답해도 Claude 앱 알림이
+  // 꺼져 있으면 아무것도 안 뜬다(멘션 알림과 같은 까닭). 누르면 이 세션이 열려 위 줄의 Join 이 보인다.
+  const link = await sessionLink($)
+  if (link && !test && (await systemNotify($, title, body, link))) return
   const sent = await $.ui.notify(body, { title }).catch(() => null)
   if (sent?.isSent) return
   // A test's sessions (SHARED_SESSION_NO_BROWSER=1) open and raise nothing on the machine.
-  if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
-  const as = (text: string) => `"${text.slice(0, 200).replace(/[\\"]/g, c => `\\${c}`)}"`
-  await sh(
-    $,
-    [
-      'if command -v osascript >/dev/null 2>&1; then',
-      `  osascript -e ${sq(`display notification ${as(body)} with title ${as(title)} subtitle "Shared Sessions"`)} >/dev/null 2>&1`,
-      'elif command -v notify-send >/dev/null 2>&1; then',
-      `  notify-send ${sq(title)} ${sq(body)} >/dev/null 2>&1`,
-      'fi',
-      '',
-    ].join('\n'),
-  )
+  if (test) return
+  await systemNotify($, title, body, link)
 }
 
 // An invite answered (joined or set aside): gone here, in the machine's other
@@ -12368,8 +12419,10 @@ export const register: Register = (on, options) => {
     void noteTyping($, r.text).catch(() => {})
     return r
   })
+  // Only the person's own changes say anything: an undo, or the box emptied
+  // (a send, a clear). A recalled history entry or a fill isn't writing.
   on('prompt.change', async ($, e, next) => {
-    void noteTyping($, e.text).catch(() => {})
+    if (e.origin.kind === 'clear' || e.origin.kind === 'undo') void noteTyping($, e.text).catch(() => {})
     return next(e)
   })
 
@@ -13014,13 +13067,14 @@ export const register: Register = (on, options) => {
     // 방장의 말로 방에 보낸다. 손님의 말(이름: 글)이 이렇게 들어왔으면 그 사람의 말로 보낸다.
     const kept = (stored.message ?? e.message) as { type?: string; name?: string; content: unknown }
     if (kept.type === 'attachment' && kept.name === 'queued_command') {
-      const words = midTurnWords(kept.content)
-      if (words) {
-        const spoken = splitSpeaker(words)
+      const found = midTurnWords(kept.content)
+      if (found) {
+        const { words, byHost } = found
+        const spoken = byHost ? null : splitSpeaker(words)
         const theirs = spoken && (await read($, peopleA)).some(p => p.role !== 'host' && p.name === spoken.who)
-        sendRow($, theirs && spoken ? { kind: 'user', who: spoken.who, text: spoken.text } : { kind: 'user', who: host, text: words })
+        sendRow($, theirs && spoken ? { kind: 'user', who: spoken.who, text: spoken.text, midTurn: true } : { kind: 'user', who: host, text: words, midTurn: true })
+        return stored
       }
-      return stored
     }
     // A teammate's session's message, delivered from its mailbox: under the
     // teammate's name, as a relayed prompt is drawn; and Claude's SendMessage
@@ -15442,7 +15496,9 @@ export const register: Register = (on, options) => {
       ) : null
     // Someone writing takes the words while they do (a few seconds).
     const typingNames = typingWords(await read($, typingA))
-    const typingNow = typingNames.length ? typingText(el, typingNames, colors, 'now') : null
+    // Never over what needs the person: an OK being waited for, or a lost connection.
+    const critical = v.connection !== 'live' || Boolean(v.working?.waitingFor)
+    const typingNow = typingNames.length && !critical ? typingText(el, typingNames, colors, 'now') : null
     const pin = !stopping && e.surface === 'desktop' && (await read($, pinRefusedA))
     // An invite to another session waits here too (every session may be in a
     // room): a button in the row, in place of the two it can spare.

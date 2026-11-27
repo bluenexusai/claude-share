@@ -45,3 +45,17 @@ test('a notification folded into a turn the same way is no one\'s prompt, and an
   await asked.clock.advance(100)
   expect(rowsOf(asked)).toEqual([])
 })
+
+test("a short word the host queued isn't matched inside another attachment that happens to contain it", async ($, on) => {
+  const asked = await shared($, on)
+  const typed = { type: 'user', role: 'user', content: [{ type: 'text', text: 'done' }] }
+  await $.session.append({ message: typed, door: 'queue', origin: { kind: 'composer' }, uuid: 'q1' } as never)
+  const note = { type: 'attachment', name: 'queued_command', content: [{ type: 'text', text: '<task-notification>\n<summary>Build done</summary>\n</task-notification>' }] }
+  await $.session.append({ message: note, door: 'attachment', origin: { kind: 'engine' }, uuid: 'a1' } as never)
+  await asked.clock.advance(100)
+  expect(rowsOf(asked)).toEqual([])
+  const folded = { type: 'attachment', name: 'queued_command', content: [{ type: 'text', text: REMINDER('done') }] }
+  await $.session.append({ message: folded, door: 'attachment', origin: { kind: 'engine' }, uuid: 'a2' } as never)
+  await asked.clock.advance(100)
+  expect(rowsOf(asked)).toEqual([['user', 'done']])
+})

@@ -190,7 +190,7 @@ test('a prompt that @mentions you pings, says so, and starts your reply', async 
   })
   await joinWith($, asked)
   await asked.clock.advance(500)
-  expect(asked.toasted.some(t => t.startsWith('Alex mentioned you: @scott can you look'))).toBe(true)
+  expect(asked.toasted.some(t => t.startsWith('Alex님이 멘션했습니다: @scott can you look'))).toBe(true)
   expect(played).toContain('sounds/mention.wav')
   expect(suggested).toContain('@Alex ')
 })

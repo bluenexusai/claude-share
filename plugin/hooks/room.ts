@@ -17,15 +17,23 @@ export function replyKey(text: string): string {
   return `${(h >>> 0).toString(36)}.${t.length}`
 }
 
-/** Which of `names` a text @mentions (`@Kyle`, `@kyle,`; a name with spaces by its first word). */
+// What Korean puts right after a name: `@민지님`, `@지수야`, `@민지께`, `@지수님이` (11/27).
+const NAME_TAILS = new Set(['님', '님이', '님은', '님도', '님께', '님께서', '님한테', '님에게', '님아', '씨', '씨가', '아', '야', '께', '에게', '한테', '이', '가', '은', '는', '도'])
+
+/** Which of `names` a text @mentions (`@Kyle`, `@kyle,`; a name with spaces by its first word; a Korean tail after it). */
 export function mentionsOf(text: string, names: readonly string[]): string[] {
   const out = new Set<string>()
-  const at = [...text.matchAll(/(^|[^\w@])@([\p{L}\p{N}._-]+)/gu)].map(m => m[2]!.toLowerCase().replace(/[._-]+$/, ''))
+  // An @ inside an address or a path (`medium.com/@kim`, `@scope/pkg`) is no mention.
+  const at = [...text.matchAll(/(^|[^\w@/:.])@([\p{L}\p{N}._'-]+)(?![\p{L}\p{N}._'/-])/gu)].map(m => m[2]!.toLowerCase().replace(/[._'-]+$/, ''))
   if (!at.length) return []
+  const named = (a: string, n: string) => a === n || (n.length > 0 && a.startsWith(n) && NAME_TAILS.has(a.slice(n.length)))
+  const firstOf = (name: string) => name.toLowerCase().split(/\s+/)[0] ?? ''
   for (const name of names) {
     const whole = name.toLowerCase().replace(/\s+/g, '')
-    const first = name.toLowerCase().split(/\s+/)[0] ?? ''
-    if (at.some(a => a === whole || a === first)) out.add(name)
+    const first = firstOf(name)
+    // 첫 낱말이 둘 이상과 겹치면(`@Kim`) 첫 낱말로는 아무도 부르지 않는다: 전체 이름을 쳐야 한다.
+    const shared = names.filter(n => firstOf(n) === first).length > 1
+    if (at.some(a => named(a, whole) || (!shared && named(a, first)))) out.add(name)
   }
   return [...out]
 }
