@@ -77,7 +77,7 @@ test('a guest sees what the host showed in the Room, with Open', async ($, on) =
   await $.prompt.submit({ text: LINK, origin: { kind: 'composer' }, wait: false })
   await asked.clock.advance(10)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
-  expect((await pane.find({ key: 'tab-shown' }))?.props.label).toBe('Shown 1')
+  expect((await pane.find({ key: 'tab-shown' }))?.props.label).toBe('보여 준 것 1')
   await pane.press({ key: 'tab-shown' })
   expect(await pane.find({ type: 'Text', text: /chart\.html/ })).toBeDefined()
   expect(await pane.find({ key: 'open-seq:2' })).toBeDefined()
@@ -117,8 +117,8 @@ test("a guest opens localhost in Claude's browser only after the helper is ready
   // The host's own number, or nothing: a page that moves loses its sign-ins.
   expect(JSON.parse(spawn.input!).strict).toBe(true)
   // Said once: what the first preview at the host's numbers here costs.
-  expect(asked.toasted.filter(t => t.startsWith("Opened Sam's localhost:3340"))).toEqual([
-    "Opened Sam's localhost:3340 in Claude's browser. While you're in the room, localhost:3340 here reaches Sam's, your cookies for it included; Close in Room → Shown, or Leave, frees it.",
+  expect(asked.toasted.filter(t => /^Sam님의 localhost:3340 .*열었어요/.test(t))).toEqual([
+    'Sam님의 localhost:3340 페이지를 Claude 브라우저에서 열었어요. 방에 있는 동안 여기 localhost:3340 주소는 Sam님 쪽으로 연결되고, 쿠키도 함께 전달돼요. 방의 공유 목록에서 닫기나 나가기를 누르면 연결이 풀려요.',
   ])
   await pane.press({ key: 'public-preview:pv-local' })
   await eventually(asked.clock, () => urls.length === 2)
@@ -148,10 +148,10 @@ test('with no window possible and the host port taken here, the page opens on a 
     [3340, false],
   ])
   await asked.clock.advance(20)
-  const mapping = await pane.find({ type: 'Text', text: "localhost:44321 here → Sam's localhost:3340" })
-  expect(mapping?.text).toBe("localhost:44321 here → Sam's localhost:3340")
-  expect(asked.toasted.filter(t => t.startsWith("Sam's preview opened"))).toEqual([
-    "Sam's preview opened at localhost:44321 here, not localhost:3340, which is in use on this computer, so sign-ins registered for localhost:3340 won't work. A separate window would keep Sam's addresses, but preview windows work on macOS and Linux.",
+  const mapping = await pane.find({ type: 'Text', text: '여기 localhost:44321 → Sam님의 localhost:3340' })
+  expect(mapping?.text).toBe('여기 localhost:44321 → Sam님의 localhost:3340')
+  expect(asked.toasted.filter(t => t.startsWith('Sam님의 미리보기가 여기'))).toEqual([
+    'Sam님의 미리보기가 여기서는 localhost:3340 대신 localhost:44321에서 열렸어요(이 컴퓨터에서 이미 쓰는 포트). 그래서 localhost:3340에 등록된 로그인은 작동하지 않아요. Sam님의 주소를 그대로 쓰려면 별도 창이 필요한데, 창을 열 수 없어요: 미리보기 창은 macOS와 Linux에서만 열 수 있어요.',
   ])
   expect(asked.toasted.some(t => t.includes('Fixed OAuth callbacks'))).toBe(false)
   expect(asked.filter(a => a.endsWith('/ticket'))).toHaveLength(0)
@@ -174,7 +174,7 @@ for (const invalid of [0, 65536]) {
     asked.localHelpers[0]!.send({ state: 'ready', port: invalid })
     await eventually(asked.clock, () => asked.localHelpers[0]!.stopped)
     expect(asked.copied).toHaveLength(0)
-    expect(asked.toasted.some(t => t.includes('valid listening port'))).toBe(true)
+    expect(asked.toasted.some(t => t.includes('올바른 포트를 알려 주지 않았어요'))).toBe(true)
     await $.command.run({ command: 'stop-sharing', args: '' } as never)
   })
 }
@@ -187,8 +187,8 @@ test('Open while the host is offline binds nothing and says so, and never falls 
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'terminal', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-shown' })
   await pane.press({ key: 'open-preview:pv-local' })
-  await eventually(asked.clock, () => asked.toasted.some(t => t.includes('is offline')))
-  expect(asked.toasted).toContain("Sam is offline, so their previews can't open now. Press Open again once they're back.")
+  await eventually(asked.clock, () => asked.toasted.some(t => t.includes('오프라인이라')))
+  expect(asked.toasted).toContain('Sam님이 오프라인이라 지금은 미리보기를 열 수 없어요. 돌아오면 열기를 다시 누르세요.')
   expect(asked.localHelpers).toHaveLength(0)
   expect(asked.copied).toHaveLength(0)
   expect(asked.filter(a => a.endsWith('/ticket'))).toHaveLength(0)
@@ -196,8 +196,8 @@ test('Open while the host is offline binds nothing and says so, and never falls 
 })
 
 for (const [failure, message] of [
-  ['busy', /localhost:3340 is already in use/],
-  ['missing', /need Node/],
+  ['busy', /localhost:3340 포트는 이 컴퓨터에서 이미 쓰고 있어요/],
+  ['missing', /Node 22\.18 이상이 필요해요/],
 ] as const) {
   test(`a ${failure} localhost helper reports the problem without opening a public preview`, async ($, on) => {
     const asked = world(on, {
@@ -236,15 +236,15 @@ test('a channel failure keeps the listener and its port; success clears its tran
   helper.send({ state: 'channel-error', code: 'TIMEOUT' })
   await asked.clock.advance(20)
   expect(helper.stopped).toBe(false)
-  expect(await pane.find({ type: 'Text', text: /connection or request limit reached|Preview authorization was refused/ })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /연결 수나 요청 수가 한도에 닿았어요|미리보기 접근이 거부됐어요/ })).toBeUndefined()
   helper.send({ state: 'channel-error', code: 'BUSY' })
   helper.send({ state: 'channel-error', code: 'BUSY' })
   await asked.clock.advance(20)
-  expect(asked.toasted.filter(t => t.includes('connection or request limit reached'))).toHaveLength(1)
-  expect((await pane.find({ type: 'Text', text: /connection or request limit reached|Preview authorization was refused/ }))?.text).toContain(
-    'connection or request limit reached',
+  expect(asked.toasted.filter(t => t.includes('연결 수나 요청 수가 한도에 닿았어요'))).toHaveLength(1)
+  expect((await pane.find({ type: 'Text', text: /연결 수나 요청 수가 한도에 닿았어요|미리보기 접근이 거부됐어요/ }))?.text).toContain(
+    '연결 수나 요청 수가 한도에 닿았어요',
   )
-  expect((await pane.find({ type: 'Text', text: "localhost:3340 here → Sam's localhost:3340" }))?.text).toBe("localhost:3340 here → Sam's localhost:3340")
+  expect((await pane.find({ type: 'Text', text: '여기 localhost:3340 → Sam님의 localhost:3340' }))?.text).toBe('여기 localhost:3340 → Sam님의 localhost:3340')
   await pane.press({ key: 'open-preview:pv-local' })
   await eventually(asked.clock, () => asked.externals.length === 2)
   expect(asked.localHelpers).toHaveLength(1)
@@ -252,10 +252,10 @@ test('a channel failure keeps the listener and its port; success clears its tran
   expect(tunnels(asked)).toHaveLength(1)
   helper.send({ state: 'channel-ready' })
   await asked.clock.advance(20)
-  expect(await pane.find({ type: 'Text', text: /connection or request limit reached|Preview authorization was refused/ })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /연결 수나 요청 수가 한도에 닿았어요|미리보기 접근이 거부됐어요/ })).toBeUndefined()
   helper.send({ state: 'channel-error', code: 'AUTH' })
   await asked.clock.advance(20)
-  expect((await pane.find({ type: 'Text', text: /Preview authorization was refused/ }))?.text).toContain('Press Open')
+  expect((await pane.find({ type: 'Text', text: /미리보기 접근이 거부됐어요/ }))?.text).toContain('열기를 눌러')
   expect(asked.localHelpers).toHaveLength(1)
   expect(helper.stopped).toBe(false)
   expect(tunnels(asked)).toHaveLength(1)
@@ -268,7 +268,7 @@ test('a channel failure keeps the listener and its port; success clears its tran
   expect(tunnels(asked)).toHaveLength(2)
   expect(asked.filter(a => a.endsWith('/ticket'))).toHaveLength(0)
   expect(new Set(asked.externals)).toEqual(new Set(['http://localhost:3340/login?next=%2Faccount']))
-  expect(await pane.find({ type: 'Text', text: /connection or request limit reached|Preview authorization was refused/ })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /연결 수나 요청 수가 한도에 닿았어요|미리보기 접근이 거부됐어요/ })).toBeUndefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
   expect(asked.localHelpers.every(h => h.stopped)).toBe(true)
 })
@@ -286,7 +286,7 @@ test('a failed or exited localhost helper redraws and restarts on Open; Leave cl
   await eventually(asked.clock, () => asked.externals.length)
   asked.localHelpers[0]!.send({ state: 'error', code: 'STARTUP' })
   await asked.clock.advance(20)
-  expect((await pane.find({ type: 'Text', text: 'Last: localhost:3340' }))?.text).toBe("Last: localhost:3340 here → Sam's localhost:3340")
+  expect((await pane.find({ type: 'Text', text: '지난번: 여기 localhost:3340' }))?.text).toBe('지난번: 여기 localhost:3340 → Sam님의 localhost:3340')
   await pane.press({ key: 'open-preview:pv-local' })
   await eventually(asked.clock, () => asked.externals.length === 2)
   expect(asked.localHelpers).toHaveLength(2)
@@ -313,7 +313,7 @@ test('a replay never forwards by itself: a forwarded preview waits for Open; one
   await $.turn.complete({ turnId: 'join-preview', isAborted: false, durationMs: 0, reason: 'answer' } as never)
   await asked.clock.advance(10)
   // The host chose to forward it: nothing starts here until this guest says so.
-  await $.turn.start({ turnId: 'show-forwarded', text: 'Sam shared Sign in (preview)' })
+  await $.turn.start({ turnId: 'show-forwarded', text: 'Sam님이 공유했습니다: Sign in (미리보기)' })
   const chunks = []
   for await (const chunk of $.turn.step({ ...STEP, turnId: 'show-forwarded' } as never)) chunks.push(chunk)
   expect(chunks.some(c => c.kind === 'tool')).toBe(false)
@@ -322,13 +322,13 @@ test('a replay never forwards by itself: a forwarded preview waits for Open; one
       .filter(c => c.kind === 'text')
       .map(c => c.text)
       .join(''),
-  ).toContain('press **Open preview** above the prompt (or **Open** in the Room) to open it at http://localhost:3340/login?next=%2Faccount')
+  ).toContain('입력창 위 **미리보기 열기**(또는 방의 **열기**)를 누르면 http://localhost:3340/login?next=%2Faccount에서 열립니다')
   expect(asked.localHelpers).toHaveLength(0)
   expect(tunnels(asked)).toHaveLength(0)
   await $.turn.complete({ turnId: 'show-forwarded', isAborted: false, durationMs: 0, reason: 'answer' } as never)
   await asked.clock.advance(10)
   // Shared because Claude mentioned it: its link, on the preview's own host name.
-  await $.turn.start({ turnId: 'show-link', text: 'Sam shared Docs (preview)' })
+  await $.turn.start({ turnId: 'show-link', text: 'Sam님이 공유했습니다: Docs (미리보기)' })
   const more = []
   for await (const chunk of $.turn.step({ ...STEP, turnId: 'show-link' } as never)) more.push(chunk)
   const call = more.find(c => c.kind === 'tool')
@@ -357,7 +357,7 @@ test("the host's own /share-preview shares a port for forwarding", async ($, on)
   await ui.press({ key: 'share-prompt' })
   await asked.clock.advance(50)
   const r = await $.command.run({ command: 'share-preview', args: '3340 App' } as never)
-  expect(r).toEqual({ text: 'Teammates can reach localhost:3340 now. Stop it in Room → Shown.' })
+  expect(r).toEqual({ text: '이제 손님이 localhost:3340 포트에 들어올 수 있어요. 방의 「보여 준 것」에서 끝낼 수 있어요.' })
   expect(asked.sent.filter(x => x.path.endsWith('/previews')).at(-1)?.body).toEqual({ port: 3340, title: 'App', tcp: true })
   await asked.clock.advance(100)
   expect(asked.posted.find(e => e.type === 'artifact' && e.body.kind === 'preview')?.body.tcp).toBe(true)
@@ -382,7 +382,7 @@ for (const ending of ['leave', 'timeout'] as const) {
     asked.localHelpers[0]!.send({ state: 'ready', port: 3340 })
     await asked.clock.advance(10)
     expect(asked.copied).toHaveLength(0)
-    if (ending === 'timeout') expect(asked.toasted.some(t => t.includes('took too long'))).toBe(true)
+    if (ending === 'timeout') expect(asked.toasted.some(t => t.includes('너무 오래 걸려'))).toBe(true)
   })
 }
 
@@ -402,9 +402,9 @@ test('a session reopened after its person left from the Team panel says they lef
   const asked = world(on, { leftElsewhere: true, files: { [checkpointPath('joined:session-test-0001')]: JSON.stringify({ version: 1, value: saved }) } })
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   await $.session.start(START)
-  expect(await eventually(asked.clock, () => asked.logged.some(l => l.includes('from the Team panel')))).toBe(true)
-  expect(asked.logged).toContain("You left Sam's session from the Team panel while this one was closed.")
-  expect(asked.logged.some(l => l.includes('ended while this one was closed'))).toBe(false)
+  expect(await eventually(asked.clock, () => asked.logged.some(l => l.includes('팀 패널에서')))).toBe(true)
+  expect(asked.logged).toContain('이 세션이 닫혀 있는 동안 팀 패널에서 Sam님의 세션을 나갔습니다.')
+  expect(asked.logged.some(l => l.includes('닫혀 있는 동안') && l.includes('끝났습니다'))).toBe(false)
   expect(asked.state.mode ?? 'idle').toBe('idle')
   expect(asked.some(a => a.endsWith('/join'))).toBe(false) // never seated again
 })
@@ -416,7 +416,7 @@ test('saved localhost listeners resume and restore after helper loss without ope
     autoOpen: true,
     policy: { prompts: 'everyone', approvals: 'edits', files: 'on' },
     shown: [
-      { key: 'preview:pv-local', kind: 'preview', name: 'Sign in (preview)', ts: 900, pid: 'pv-local', port: 3340, path: '/login?next=%2Faccount', tcp: true },
+      { key: 'preview:pv-local', kind: 'preview', name: 'Sign in (미리보기)', ts: 900, pid: 'pv-local', port: 3340, path: '/login?next=%2Faccount', tcp: true },
     ],
     localPreviews: [{ pid: 'pv-local', port: 3340 }],
     activity: [],
@@ -750,14 +750,14 @@ test('no Node to run the TCP worker: each connection is refused at once, the hos
   await $.command.run({ command: 'share-preview', args: '3340 App' } as never)
   const workers = () => asked.spawned.filter(s => s.argv.at(-1)?.endsWith('/relay/tcp-worker.mts')).length
   const refused = (id: string) => asked.spawned.filter(s => s.argv[0] === 'curl' && s.input?.includes(`/ws/${id}/reject"`))
-  const said = () => asked.toasted.filter(t => t.includes('needs Node 22.18 or later on this computer'))
+  const said = () => asked.toasted.filter(t => t.includes('이 컴퓨터에 Node 22.18 이상이 필요한데'))
   stream.push({ tcp: { id: 'connection0001', pid: 'pv1', port: 3340 } })
   await asked.clock.advance(1000)
   await eventually(asked.clock, () => refused('connection0001').length)
   stream.length = 0
   expect(refused('connection0001')[0]!.input).toContain('data = "{\\"code\\":\\"CONNECT\\"}"')
   expect(said()).toEqual([
-    'Forwarding localhost:3340 to teammates needs Node 22.18 or later on this computer, and none was found. Install it; their next connection tries again.',
+    '팀원에게 localhost:3340 포트를 포워딩하려면 이 컴퓨터에 Node 22.18 이상이 필요한데 찾지 못했어요. 설치하면 팀원이 다음에 연결할 때 다시 시도해요.',
   ])
   // The next connection starts a worker again: refused the same way, and not said again.
   const before = workers()

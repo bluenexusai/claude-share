@@ -123,7 +123,7 @@ test("a teammate's calls asked in the row above the prompt at once are each the 
   void check('c')
   expect(await showing('a', 2)).toBe(true)
   let row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /wants Claude to run/ }))?.text).toBe('Alex wants Claude to run WebFetch https://example.com/a · 2 more waiting')
+  expect((await row.find({ type: 'Text', text: /님이 Claude에게 실행 요청: / }))?.text).toBe('Alex님이 Claude에게 실행 요청: WebFetch https://example.com/a · 2개 더 대기 중')
   // Allow once answers the call the row showed, and only that one.
   await row.press({ key: 'approve-once' })
   expect(await showing('b', 1)).toBe(true)
@@ -142,7 +142,7 @@ test("a teammate's calls asked in the row above the prompt at once are each the 
   ])
   // Always allow trusts Alex: the call still waiting after it goes with it, unasked.
   row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /wants Claude to run/ }))?.text).toBe('Alex wants Claude to run WebFetch https://example.com/b · 1 more waiting')
+  expect((await row.find({ type: 'Text', text: /님이 Claude에게 실행 요청: / }))?.text).toBe('Alex님이 Claude에게 실행 요청: WebFetch https://example.com/b · 1개 더 대기 중')
   await row.press({ key: 'approve-always' })
   const allowed = { decision: 'allow', reason: 'scott allowed it' }
   expect(await eventually(asked.clock, () => verdicts.b && verdicts.c)).toBeTruthy()
@@ -171,7 +171,7 @@ test("Stop sharing declines every teammate's call waiting in the row above the p
   expect(await showing('a', 0)).toBe(true)
   void check('b')
   expect(await showing('a', 1)).toBe(true)
-  expect(await $.command.run({ command: 'stop-sharing', args: '' } as never)).toEqual({ text: 'Stopped sharing. The link no longer works.' })
+  expect(await $.command.run({ command: 'stop-sharing', args: '' } as never)).toEqual({ text: '공유를 끝냈습니다. 이제 링크로 들어올 수 없습니다.' })
   expect(await eventually(asked.clock, () => verdicts.a && verdicts.b)).toBeTruthy()
   // Whose name it gives depends on whether the room was gone yet.
   const declined = { decision: 'deny', reason: expect.stringMatching(/^(scott|The host) did not allow this WebFetch call from the shared session\.$/) }
@@ -366,7 +366,7 @@ test("loaded again after a reload while a teammate's call waited in the row abov
   expect(asked.posted.filter(e => e.type === 'approval').map(e => e.body)).toEqual([{ pending: false }])
   const ui = await $.ui.mount(band('desktop'))
   expect(await ui.find({ key: 'approve-once' })).toBeUndefined()
-  expect(await ui.find({ type: 'Text', text: /wants Claude to run/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /님이 Claude에게 실행 요청: / })).toBeUndefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -425,11 +425,11 @@ test("a teammate's calls put to the dialog at once are asked one at a time, each
   await asked.clock.advance(2_000)
   expect(dialog.up).toHaveLength(1)
   const first = await dialog.show($, 0)
-  expect(first.question).toBe('Alex wants Claude to run Bash npm run build (+1 line). Allow it?')
+  expect(first.question).toBe('Alex님이 Claude에게 Bash npm run build (+1줄) 실행을 요청했습니다. 허용할까요?')
   expect(first.options.map(o => o.preview)).toEqual([
-    '```bash\nnpm run build\nrm -rf ~/work/project\n```\n\nin `/tmp/demo`',
-    '```bash\nnpm run build\nrm -rf ~/work/project\n```\n\nin `/tmp/demo`',
-    '```bash\nnpm run build\nrm -rf ~/work/project\n```\n\nin `/tmp/demo`',
+    '```bash\nnpm run build\nrm -rf ~/work/project\n```\n\n위치: `/tmp/demo`',
+    '```bash\nnpm run build\nrm -rf ~/work/project\n```\n\n위치: `/tmp/demo`',
+    '```bash\nnpm run build\nrm -rf ~/work/project\n```\n\n위치: `/tmp/demo`',
   ])
   expect(asked.state.working?.waitingFor).toBe('Bash npm run build')
   dialog.up[0]!.answer('Allow once')
@@ -438,8 +438,8 @@ test("a teammate's calls put to the dialog at once are asked one at a time, each
   expect(asked.state.working?.waitingFor).toBe('Bash ls')
   expect(await eventually(asked.clock, () => dialog.up.length === 2)).toBe(true)
   const second = await dialog.show($, 1)
-  expect(second.question).toBe('Alex wants Claude to run Bash ls. Allow it?')
-  expect(second.options[0]?.preview).toBe('```bash\nls\n```\n\nin `/tmp/demo`')
+  expect(second.question).toBe('Alex님이 Claude에게 Bash ls 실행을 요청했습니다. 허용할까요?')
+  expect(second.options[0]?.preview).toBe('```bash\nls\n```\n\n위치: `/tmp/demo`')
   dialog.up[1]!.answer('Decline')
   expect(await eventually(asked.clock, () => verdicts.b)).toEqual({ decision: 'deny', reason: 'scott did not allow this Bash call from the shared session.' })
   expect(asked.state.working?.waitingFor).toBeNull()
@@ -589,7 +589,7 @@ for (const [ending, then] of [
     void check('a')
     void check('b')
     expect(await eventually(asked.clock, () => up.length === 1)).toBe(true)
-    expect(await $.command.run({ command: 'stop-sharing', args: '' } as never)).toEqual({ text: 'Stopped sharing. The link no longer works.' })
+    expect(await $.command.run({ command: 'stop-sharing', args: '' } as never)).toEqual({ text: '공유를 끝냈습니다. 이제 링크로 들어올 수 없습니다.' })
     const declined = { decision: 'deny', reason: expect.stringMatching(/^(scott|The host) did not allow this WebFetch call from the shared session\.$/) }
     expect(await eventually(asked.clock, () => verdicts.b)).toEqual(declined)
     if (then === 'a new room') {
@@ -641,17 +641,17 @@ test("what one line leaves out of a teammate's call is said beside it, the Room 
     id: expect.any(String),
     who: 'Alex',
     what: 'Bash npm test',
-    extent: '+45 lines',
+    extent: '+45줄',
     always: 'Always allow Alex',
     more: 0,
   })
   const row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /wants Claude to run/ }))?.text).toBe('Alex wants Claude to run Bash npm test')
-  expect((await row.find({ key: 'approve-whole' }))?.text).toBe('+45 lines')
+  expect((await row.find({ type: 'Text', text: /님이 Claude에게 실행 요청: / }))?.text).toBe('Alex님이 Claude에게 실행 요청: Bash npm test')
+  expect((await row.find({ key: 'approve-whole' }))?.text).toBe('+45줄')
   await row.press({ key: 'approve-whole' })
   expect(asked.opened).toContain('shared-room')
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
-  expect((await pane.find({ key: 'approval-whole' }))?.text).toBe(`\`\`\`bash\n${long}\n\`\`\`\n\nin \`/tmp/demo\``)
+  expect((await pane.find({ key: 'approval-whole' }))?.text).toBe(`\`\`\`bash\n${long}\n\`\`\`\n\n위치: \`/tmp/demo\``)
   await pane.press({ key: 'room-approve-no' })
   expect(await eventually(asked.clock, () => verdicts.c)).toEqual({ decision: 'deny', reason: 'scott did not allow this Bash call from the shared session.' })
   expect(await pane.find({ key: 'approval-whole' })).toBeUndefined()
@@ -659,7 +659,7 @@ test("what one line leaves out of a teammate's call is said beside it, the Room 
   void $.tool
     .check({ tool: 'Write', input: { file_path: '/tmp/demo/notes.md', content: 'one\ntwo\nthree\n' }, tool_use_id: 'toolu_w' } as never)
     .then(v => void (verdicts.w = v))
-  expect(await eventually(asked.clock, () => asked.state.approving)).toMatchObject({ what: 'Write notes.md', extent: '3 lines' })
+  expect(await eventually(asked.clock, () => asked.state.approving)).toMatchObject({ what: 'Write notes.md', extent: '3줄' })
   await (await $.ui.mount(band('desktop'))).press({ key: 'approve-no' })
   expect(await eventually(asked.clock, () => verdicts.w)).toEqual({ decision: 'deny', reason: 'scott did not allow this Write call from the shared session.' })
   // In the dialog: 41 lines, the last the one that does the harm.
@@ -667,8 +667,8 @@ test("what one line leaves out of a teammate's call is said beside it, the Room 
   void bash($, verdicts, 'k', command)
   expect(await eventually(asked.clock, () => dialog.up.length === 1)).toBe(true)
   const asking = await dialog.show($, 0)
-  expect(asking.question).toBe('Alex wants Claude to run Bash echo step 1 (+40 lines). Allow it?')
-  expect(asking.options[0]?.preview).toBe(`\`\`\`bash\n${command.split('\n').slice(0, 40).join('\n')}\n\`\`\`\n\n… 1 more line\n\nin \`/tmp/demo\``)
+  expect(asking.question).toBe('Alex님이 Claude에게 Bash echo step 1 (+40줄) 실행을 요청했습니다. 허용할까요?')
+  expect(asking.options[0]?.preview).toBe(`\`\`\`bash\n${command.split('\n').slice(0, 40).join('\n')}\n\`\`\`\n\n… 1줄 더\n\n위치: \`/tmp/demo\``)
   dialog.up[0]!.answer('Decline')
   expect(await eventually(asked.clock, () => verdicts.k)).toEqual({ decision: 'deny', reason: 'scott did not allow this Bash call from the shared session.' })
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -724,7 +724,7 @@ test("an agent started in a teammate's turn is theirs after that turn ends, and 
     id: expect.any(String),
     who: 'Alex',
     what: 'Edit a.ts',
-    extent: '1 → 1 line',
+    extent: '1 → 1줄',
     always: 'Always allow Alex',
     more: 0,
   })
@@ -762,8 +762,8 @@ test("a teammate's agent waiting in the host's turn is theirs in the Room's wait
   expect(await eventually(asked.clock, () => dialog.up.length === 1)).toBe(true)
   expect(asked.state.working).toMatchObject({ by: 'scott', waitingFor: 'Edit a.ts' })
   const pane = await $.ui.mount(roomPane('desktop'))
-  expect(await pane.find({ type: 'Text', text: 'Alex is waiting for your OK on Edit a.ts' })).toBeDefined()
-  expect(await pane.find({ type: 'Text', text: 'scott is waiting for your OK on Edit a.ts' })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: 'Alex님이 Edit a.ts 허용을 기다립니다' })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: 'scott님이 Edit a.ts 허용을 기다립니다' })).toBeUndefined()
   dialog.up[0]!.answer('Decline')
   expect(await eventually(asked.clock, () => verdicts.edit)).toMatchObject({ decision: 'deny' })
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1136,7 +1136,7 @@ test("a teammate's prompt that never starts holds back no one after it, and one 
   await asked.clock.advance(50)
   expect(asked.submitted.map(p => p.text)).toEqual(['Alex: First', 'Alex: Third'])
   expect(asked.posted.filter(e => e.type === 'declined').map(e => e.body)).toEqual([
-    { pid: 'p2', who: 'Sam', reason: "scott's Claude Code didn't take this prompt, so it didn't run. Send it again." },
+    { pid: 'p2', who: 'Sam', reason: 'scott님의 Claude Code가 이 요청을 받지 않아 실행되지 않았습니다. 다시 보내 주세요.' },
   ])
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -1311,7 +1311,7 @@ test('a Desktop session reopened under a new id (a rewind) takes its room back; 
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   await $.session.start(START)
   await asked.clock.advance(10)
-  expect(asked.logged).toContain('Still sharing this session: http://localhost:8787/s/room0000000000000009')
+  expect(asked.logged).toContain('이 세션을 계속 공유하고 있습니다: http://localhost:8787/s/room0000000000000009')
   expect(asked).toContain('POST /api/rooms/room0000000000000008/end')
   // Another Desktop session's room is its own.
   expect(asked.some(a => a.includes('room0000000000000007'))).toBe(false)

@@ -41,10 +41,10 @@ test('in Claude Desktop, a copy installed from a local marketplace folder says h
   await asked.clock.advance(10)
   const command =
     'claude plugin marketplace remove claude-share && claude plugin marketplace add Paradigm-Study/claude-share && claude plugin install shared-session@claude-share'
-  expect(asked.logged.some(l => l.includes('9.9.9 is out') && l.includes('local marketplace folder') && l.includes(command))).toBe(true)
+  expect(asked.logged.some(l => l.includes('9.9.9 버전이 나왔습니다') && l.includes('로컬 마켓플레이스 폴더') && l.includes(command))).toBe(true)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-settings' })
-  expect(await pane.find({ type: 'Text', text: /runs the copy installed from your local marketplace folder/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /로컬 마켓플레이스 폴더에 설치된 사본을 실행해서/ })).toBeDefined()
   expect(await pane.find({ key: 'copy-switch' })).toBeDefined()
 })
 
@@ -64,7 +64,7 @@ test('a GitHub marketplace in Claude Desktop shows no such note', async ($, on) 
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-settings' })
   expect(await pane.find({ key: 'copy-switch' })).toBeUndefined()
-  expect(await pane.find({ type: 'Text', text: /next new session on, a release loads in place/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /다음 새 세션부터 새 버전이 다시 시작 없이 그 자리에서 적용됩니다/ })).toBeDefined()
 })
 
 test('a marketplace added again keeps automatic updates when updates in place were chosen', async ($, on) => {
@@ -204,7 +204,7 @@ for (const config of [undefined, OWN_CONFIG] as const) {
     expect(JSON.parse(asked.files.get(file)!).servers['http://localhost:8787'].token).toBe(TEAM_TOKEN)
     expect(accountWrites(asked, file).map(s => s.argv)).toEqual([['/bin/sh', '-s']])
     if (config) expect(asked.files.has(ACCOUNT_FILE)).toBe(false)
-    expect(await $.command.run({ command: 'team', args: 'signin' } as never)).toEqual({ text: `Signed in as ${ME.name}. /team signout to sign out.` })
+    expect(await $.command.run({ command: 'team', args: 'signin' } as never)).toEqual({ text: `${ME.name}님으로 로그인되어 있습니다. 로그아웃하려면 /team signout을 입력하세요.` })
   })
 }
 
@@ -217,7 +217,7 @@ for (const how of ['signout', 'delete-account'] as const) {
     expect(asked.files.has(ACCOUNT_FILE)).toBe(false)
     // Signed out: a sign-in starts over.
     const again = await $.command.run({ command: 'team', args: 'signin' } as never)
-    expect(JSON.stringify(again)).toContain('Sign in with: /team signin github or /team signin google')
+    expect(JSON.stringify(again)).toContain('로그인 방법: /team signin github 또는 /team signin google')
     expect(JSON.parse(asked.files.get(CONFIG_ACCOUNT)!).servers).toEqual({})
   })
 }
@@ -227,7 +227,7 @@ for (const how of ['signout', 'delete-account'] as const) {
 const codeOf = (opened: string | undefined) => {
   const login = /login=([0-9a-f]{64})/.exec(opened ?? '')?.[1] ?? ''
   const code = `${login.slice(0, 4)}-${login.slice(4, 8)}`.toUpperCase()
-  return { login, code, said: `Your browser will show the code ${code}: continue there only if it matches.` }
+  return { login, code, said: `브라우저에 ${code} 코드가 보여요. 코드가 같을 때만 계속하세요.` }
 }
 
 test('/team signin says the code the browser will show, from the hash it sends, once: in its reply', async ($, on) => {
@@ -236,9 +236,9 @@ test('/team signin says the code the browser will show, from the hash it sends, 
   const { login, said } = codeOf(asked.spawned.find(s => s.input?.includes('/auth/github/start?login='))?.input)
   expect(login).toMatch(/^[0-9a-f]{64}$/)
   expect(reply).toEqual({
-    text: `Sign in with GitHub in your browser; this session picks it up when you're done. ${said} If no browser opened: http://localhost:8787/auth/github/start?login=${login}`,
+    text: `브라우저에서 GitHub 로그인을 마치세요. 끝나면 이 세션이 알아서 이어받습니다. ${said} 브라우저가 열리지 않았다면: http://localhost:8787/auth/github/start?login=${login}`,
   })
-  expect(asked.toasted.some(t => t.includes('Your browser will show the code'))).toBe(false)
+  expect(asked.toasted.some(t => t.includes('코드가 같을 때만 계속하세요'))).toBe(false)
 })
 
 test("the Team panel's sign-in says the code the browser will show, as it opens and while it waits", async ($, on) => {
@@ -251,7 +251,7 @@ test("the Team panel's sign-in says the code the browser will show, as it opens 
   const { login, code, said } = codeOf(opened)
   expect(opened).toContain(`/auth/github/start?login=${login}'`)
   expect(asked.toasted).toContain(said)
-  expect(await pane.find({ type: 'Text', text: 'Finish signing in with GitHub in your browser…' })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: '브라우저에서 GitHub 로그인을 마쳐 주세요…' })).toBeDefined()
   expect(await pane.find({ type: 'Text', text: said })).toBeDefined()
   expect(asked.state.teams?.signingIn?.code).toBe(code)
 })
@@ -260,7 +260,7 @@ test('signed in with a team, Share goes to it, the sign-in in a header and never
   const asked = world(on, { team: { signedIn: true } })
   await $.command.run({ command: 'team', args: 'sessions' } as never)
   const ui = await $.ui.mount(band('desktop'))
-  expect((await ui.find({ key: 'share' }))?.props.label).toBe('Share with Acme')
+  expect((await ui.find({ key: 'share' }))?.props.label).toBe('Acme에 공유하기')
   await ui.press({ key: 'share' })
   await ui.press({ key: 'share-prompt' })
   const made = asked.sent.find(r => r.path === '/api/rooms')
@@ -269,7 +269,7 @@ test('signed in with a team, Share goes to it, the sign-in in a header and never
   expect(asked.urls.some(u => u.includes('ssa_'))).toBe(false)
   expect(
     asked.logged.some(l =>
-      l.startsWith('Sharing with Acme. Everyone in Acme sees it in their Team panel and can join; the link works only for people in Acme'),
+      l.startsWith('Acme 팀과 공유합니다. Acme 팀원 모두의 팀 패널에 보이고 팀원이 참여할 수 있습니다. 링크는 Acme 팀원만 쓸 수 있습니다'),
     ),
   ).toBe(true)
 })
@@ -281,7 +281,7 @@ test('/share-session link shares by link alone, even signed in', async ($, on) =
   expect(asked.sent.find(x => x.path === '/api/rooms')?.body.team).toBeUndefined()
   // No team, but the room knows the host by account: their other sessions are them.
   expect(asked.sent.find(x => x.path === '/api/rooms')?.headers['x-shared-session-account']).toBe(TEAM_TOKEN)
-  expect(JSON.stringify(r)).toContain('Anyone with this link can join')
+  expect(JSON.stringify(r)).toContain('링크가 있는 사람은 누구나 참여해서')
 })
 
 test("the Team panel lists the team's live sessions; Join in a fresh session joins here, the sign-in sent", async ($, on) => {
@@ -296,10 +296,10 @@ test("the Team panel lists the team's live sessions; Join in a fresh session joi
   await pane.press({ key: 'join-room0000000000000101' })
   const join = await eventually(asked.clock, () => asked.sent.find(r => r.path.startsWith('/api/rooms/room0000000000000101/join')))
   expect(join?.headers['x-shared-session-account']).toBe(TEAM_TOKEN)
-  await eventually(asked.clock, () => asked.submitted.some(p => p.text === "Join Sam's session"))
-  expect(asked.submitted.some(p => p.text === "Join Sam's session")).toBe(true)
+  await eventually(asked.clock, () => asked.submitted.some(p => p.text === 'Sam님의 세션에 참여하기'))
+  expect(asked.submitted.some(p => p.text === 'Sam님의 세션에 참여하기')).toBe(true)
   const row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /^Joined$/ }))?.props.bold).toBe(true)
+  expect((await row.find({ type: 'Text', text: /^참여 중$/ }))?.props.bold).toBe(true)
 })
 
 test('Join all from a session in use opens a new Claude Desktop session, and each that joins opens the next', async ($, on) => {
@@ -374,7 +374,7 @@ test('a long history comes in pages: the join asks for them, and reads every one
   // Every read of the room's events asks for pages the engine can carry.
   expect(asked.urls.filter(u => u.includes('/events?')).every(u => u.includes('max='))).toBe(true)
   const row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /^Joined$/ }))?.props.bold).toBe(true)
+  expect((await row.find({ type: 'Text', text: /^참여 중$/ }))?.props.bold).toBe(true)
 })
 
 test('a join that fails after the seat was taken gives the seat back', async ($, on) => {
@@ -390,7 +390,7 @@ test("a teammate's invite shows above the prompt; Join joins it and clears it ev
   const asked = world(on, { team: { signedIn: true }, invites: [INVITE] })
   await $.command.run({ command: 'team', args: 'invites' } as never)
   const row = await $.ui.mount(band('desktop'))
-  expect(await row.find({ type: 'Text', text: 'Sam invites you' })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: 'Sam님이 초대했습니다' })).toBeDefined()
   expect(await row.find({ type: 'Text', text: 'demo: fix the build' })).toBeDefined()
   expect((await row.find({ key: 'invite-join' }))?.props.variant).toBe('primary')
   expect(await row.find({ key: 'share' })).toBeUndefined() // one thing at a time
@@ -423,9 +423,9 @@ test('the host invites a teammate from the Room, as themselves, and sees who was
   expect(sentInvite?.body.to).toEqual(['acct-kim'])
   expect(sentInvite?.headers['x-shared-session-account']).toBe(TEAM_TOKEN)
   await asked.clock.advance(10)
-  expect(await pane.find({ type: 'Text', text: /^Invited/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /^초대함/ })).toBeDefined()
   // Not here yet: invited again from the same row, and the invite goes out again.
-  expect((await pane.find({ key: 'invite-acct-kim' }))?.props.label).toBe('Invite again')
+  expect((await pane.find({ key: 'invite-acct-kim' }))?.props.label).toBe('다시 초대')
   const invitesSent = () => asked.sent.filter(r => r.path === '/api/rooms/room0000000000000002/invite').length
   const before = invitesSent()
   await pane.press({ key: 'invite-acct-kim' })
@@ -433,7 +433,7 @@ test('the host invites a teammate from the Room, as themselves, and sees who was
   expect(invitesSent()).toBe(before + 1)
   // And by name, in a terminal.
   const r = await $.command.run({ command: 'invite', args: 'kim' } as never)
-  expect(JSON.stringify(r)).toContain('Invited Kim')
+  expect(JSON.stringify(r)).toContain('Kim님에게 초대를 보냈습니다')
 })
 
 test('a host signed in has Invite in the row, and an empty team says how to fill it', async ($, on) => {
@@ -446,7 +446,7 @@ test('a host signed in has Invite in the row, and an empty team says how to fill
   // Invite lives in the Room's header, the row's three words are Room, Copy link and Stop.
   expect(await row.find({ key: 'invite' })).toBeUndefined()
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
-  expect((await pane.find({ key: 'room-invite' }))?.props.label).toBe('Invite')
+  expect((await pane.find({ key: 'room-invite' }))?.props.label).toBe('초대')
 })
 
 test('a new invite raises one desktop notification for the machine, not again at the next look', async ($, on) => {
@@ -458,7 +458,7 @@ test('a new invite raises one desktop notification for the machine, not again at
   await eventually(asked.clock, () => asked.spawned.some(s => s.input?.includes('display notification')))
   const raised = asked.spawned.filter(s => s.input?.includes('display notification'))
   expect(raised.length).toBe(1)
-  expect(raised[0]?.input).toContain('with title "Sam invites you"')
+  expect(raised[0]?.input).toContain('with title "Sam님이 초대했어요"')
   expect(raised[0]?.input).toContain('demo: fix the build')
   await asked.clock.advance(31_000) // the next look at the server: the same invite
   await asked.clock.advance(10_000)
@@ -476,7 +476,7 @@ test('a terminal that notifies gets it on its own channel; turned off, nothing',
   await $.session.start(START)
   await asked.clock.advance(2_100)
   await eventually(asked.clock, () => notified.length > 0)
-  expect(notified[0]).toContain('Sam invites you')
+  expect(notified[0]).toContain('Sam님이 초대했어요')
   expect(asked.spawned.some(s => s.input?.includes('display notification'))).toBe(false)
 })
 
@@ -490,7 +490,7 @@ test('invites can be just shown, without a notification', async ($, on) => {
   await asked.clock.advance(100)
   expect(asked.spawned.some(s => s.input?.includes('display notification'))).toBe(false)
   const row = await $.ui.mount(band('desktop'))
-  expect(await row.find({ type: 'Text', text: 'Sam invites you' })).toBeDefined() // still shown
+  expect(await row.find({ type: 'Text', text: 'Sam님이 초대했습니다' })).toBeDefined() // still shown
 })
 
 test('a long invite title is cut to fit beside Join, its paths shortened, never pushing the buttons out', async ($, on) => {
@@ -507,7 +507,7 @@ test('a long invite title is cut to fit beside Join, its paths shortened, never 
   const row = await $.ui.mount(band('desktop'))
   // One row: who, then the title, its paths shortened; the whole line is what's cut.
   expect(await row.find({ type: 'Text', text: /^ · interview-prep-handoff-c305f4: interview-prep-notes\.md read this/ })).toBeDefined()
-  const line = (await row.findAll({ type: 'Text' })).find(t => /invites you · interview-prep-handoff/.test(t.text ?? ''))
+  const line = (await row.findAll({ type: 'Text' })).find(t => /님이 초대했습니다 · interview-prep-handoff/.test(t.text ?? ''))
   expect(line?.props.wrap).toBe('truncate-end')
   // The words sit in a column that may shrink to nothing; the buttons keep their width.
   const tree = JSON.stringify(await row.drawn())
@@ -562,7 +562,7 @@ test('a guest whose seat the room let go (asleep, offline) takes a new one and s
   await $.prompt.submit({ text: LINK, origin: { kind: 'composer' }, wait: false })
   await asked.clock.advance(100)
   expect(asked.filter(a => a === 'POST /api/rooms/room0000000000000001/join')).toHaveLength(2)
-  expect(asked.logged.some(line => line.includes('no longer shared'))).toBe(false)
+  expect(asked.logged.some(line => line.includes('세션 공유가 끝났습니다'))).toBe(false)
   // The stream goes on with the new seat's token, from where it was.
   const streams = asked.spawned.filter(s => s.argv[0] === 'curl')
   expect(streams.at(-1)?.input).toContain('Authorization: Bearer g2')
@@ -588,9 +588,9 @@ test('the Room counts you once, with every session of yours', async ($, on) => {
   const ui = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
   expect(texts.filter(t => t === 'scott')).toHaveLength(1)
-  expect(texts.some(t => /\byou\b/.test(t))).toBe(true)
+  expect(texts.some(t => t.split(' · ').includes('나'))).toBe(true)
   const footer = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'SessionMode', props: { modes: [] } })
-  expect((await footer.find({ type: 'Text' }))?.text).toBe("in Sam's session with Alex")
+  expect((await footer.find({ type: 'Text' }))?.text).toBe('Sam님 세션 · Alex님 참여 중')
 })
 
 const HOLD = (room: string, mode: 'host' | 'guest' = 'guest') => ({
@@ -611,10 +611,10 @@ test("the Team panel opens a session you're already in, and Join all leaves out 
   const pane = await $.ui.mount(TEAM_PANE)
   // In another session here: Open, not Join.
   expect(await pane.find({ key: 'join-room0000000000000101' })).toBeUndefined()
-  expect((await pane.find({ key: 'open-room0000000000000101' }))?.props.label).toBe('Open')
-  expect(await pane.find({ type: 'Text', text: /you're in it in another session/ })).toBeDefined()
+  expect((await pane.find({ key: 'open-room0000000000000101' }))?.props.label).toBe('열기')
+  expect(await pane.find({ type: 'Text', text: /다른 세션에서 참여 중/ })).toBeDefined()
   // In it on another computer: said, and not in Join all.
-  expect(await pane.find({ type: 'Text', text: /you're in it elsewhere/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /다른 곳에서 참여 중/ })).toBeDefined()
   await pane.press({ key: 'join-all' })
   // A fresh session: the first joins here, the next opens; yours never.
   await eventually(asked.clock, () => asked.spawned.some(s => s.input?.includes('claude://code/new?q=')))
@@ -635,12 +635,12 @@ test('the Team panel leaves a session you are in elsewhere by your sign-in, afte
   await asked.clock.advance(10)
   const pane = await $.ui.mount(TEAM_PANE)
   // In it elsewhere: Leave beside Join; not in it: no Leave.
-  expect((await pane.find({ key: 'leave-room0000000000000103' }))?.props.label).toBe('Leave')
+  expect((await pane.find({ key: 'leave-room0000000000000103' }))?.props.label).toBe('나가기')
   expect(await pane.find({ key: 'join-room0000000000000103' })).toBeDefined()
   expect(await pane.find({ key: 'leave-room0000000000000102' })).toBeUndefined()
   await pane.press({ key: 'leave-room0000000000000103' })
   await asked.clock.advance(10)
-  expect((await pane.find({ key: 'leave-room0000000000000103' }))?.props.label).toBe('Leave everywhere?')
+  expect((await pane.find({ key: 'leave-room0000000000000103' }))?.props.label).toBe('모든 곳에서 나갈까요?')
   expect(asked).not.toContain('POST /api/rooms/room0000000000000103/leave')
   await pane.press({ key: 'leave-room0000000000000103' })
   await eventually(asked.clock, () => asked.some(a => a === 'POST /api/rooms/room0000000000000103/leave'))
@@ -657,8 +657,8 @@ test('a guest whose seat was left from the Team panel says so, and is out of the
   expect(await eventually(asked.clock, () => asked.state.room?.id)).toBe('room0000000000000001')
   // The room is still shared, and refuses this seat: it was left from elsewhere.
   opts.roomGone = true
-  expect(await eventually(asked.clock, () => asked.logged.find(line => line.includes('from the Team panel')))).toBe(
-    "You left Sam's session from the Team panel.",
+  expect(await eventually(asked.clock, () => asked.logged.find(line => line.includes('팀 패널에서')))).toBe(
+    '팀 패널에서 Sam님의 세션을 나갔습니다.',
   )
   expect(await eventually(asked.clock, () => (asked.state.room ?? null) === null)).toBe(true)
   // A seat refused never takes a new one.
@@ -673,11 +673,11 @@ test('the Team panel stops a session of yours by your sign-in, after asking once
   const pane = await $.ui.mount(TEAM_PANE)
   // Yours: Stop, never Join; someone else's: no Stop.
   expect(await pane.find({ key: 'join-room0000000000000101' })).toBeUndefined()
-  expect((await pane.find({ key: 'stop-room0000000000000101' }))?.props.label).toBe('Stop')
+  expect((await pane.find({ key: 'stop-room0000000000000101' }))?.props.label).toBe('공유 끝내기')
   expect(await pane.find({ key: 'stop-room0000000000000102' })).toBeUndefined()
   await pane.press({ key: 'stop-room0000000000000101' })
   await asked.clock.advance(10)
-  expect((await pane.find({ key: 'stop-room0000000000000101' }))?.props.label).toBe('Stop for everyone?')
+  expect((await pane.find({ key: 'stop-room0000000000000101' }))?.props.label).toBe('정말 공유를 끝낼까요?')
   expect(asked).not.toContain('POST /api/rooms/room0000000000000101/end')
   await pane.press({ key: 'stop-room0000000000000101' })
   await eventually(asked.clock, () => asked.some(a => a === 'POST /api/rooms/room0000000000000101/end'))
@@ -783,11 +783,11 @@ test('a dropped connection and its return stay out of the transcript; the Room k
   })
   await $.prompt.submit({ text: LINK, origin: { kind: 'composer' }, wait: false })
   await asked.clock.advance(50)
-  expect(asked.logged.filter(l => l === 'Riley joined')).toHaveLength(1)
-  expect(asked.logged.some(l => /lost connection/.test(l))).toBe(false)
+  expect(asked.logged.filter(l => l === 'Riley님이 들어왔습니다')).toHaveLength(1)
+  expect(asked.logged.some(l => /연결이 끊겼습니다/.test(l))).toBe(false)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-chat' })
-  expect(await pane.find({ type: 'Text', text: ' lost connection' })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: '님의 연결이 끊겼습니다' })).toBeDefined()
 })
 
 test('the row above the prompt stays one row: a refused pin is a button in it, not a line under it', async ($, on) => {
@@ -799,8 +799,8 @@ test('the row above the prompt stays one row: a refused pin is a button in it, n
   await asked.clock.advance(81_000)
   const tree = (await ui.drawn()) as { props: { flexDirection?: string } }
   expect(tree.props.flexDirection).toBe('row')
-  expect((await ui.find({ key: 'band-allow-pin' }))?.props.label).toBe('Pin')
-  expect(await ui.find({ type: 'Text', text: /^(Sharing|Joined)$/ })).toBeDefined()
+  expect((await ui.find({ key: 'band-allow-pin' }))?.props.label).toBe('고정')
+  expect(await ui.find({ type: 'Text', text: /^(공유 중|참여 중)$/ })).toBeDefined()
 })
 
 test("while someone watches, the host's Claude thinking, writing and drafting a call goes out live", async ($, on) => {
@@ -858,10 +858,10 @@ test("a guest's working line says what the host's Claude is doing this moment", 
     component: 'Spinner',
     props: { word: 'Working', message: null, suffix: '…', mode: 'requesting' },
   })
-  expect((await spinner.find({ type: 'Text' }))?.text).toBe('Writing notes.md · 4k characters · for Alex')
+  expect((await spinner.find({ type: 'Text' }))?.text).toBe('쓰는 중 notes.md · 4k자 · Alex님 요청')
   // The row above the prompt: for whom, for how long, and what, on its own clock.
   const row = await $.ui.mount(band('desktop'))
-  expect(await row.find({ in: 'band-live', type: 'Text', text: ' · Writing notes.md · 4k characters' })).toBeDefined()
+  expect(await row.find({ in: 'band-live', type: 'Text', text: ' · 쓰는 중 notes.md · 4k자' })).toBeDefined()
   expect(await row.find({ in: 'band-live', type: 'Text', text: 'Alex' })).toBeDefined()
 })
 
@@ -875,7 +875,7 @@ test("an invite shows in a session that's in a room too: a button in its row, Jo
   await asked.clock.advance(10)
   // Still one row, the room's: the invite is a button in it, in place of two it can spare.
   expect(((await ui.drawn()) as { props: { flexDirection?: string } }).props.flexDirection).toBe('row')
-  expect((await ui.find({ key: 'invite-open' }))?.props.label).toBe('Sam invites you')
+  expect((await ui.find({ key: 'invite-open' }))?.props.label).toBe('Sam님의 초대')
   expect(await ui.find({ key: 'copy' })).toBeUndefined()
   expect(await ui.find({ key: 'room' })).toBeDefined()
   expect(await ui.find({ key: 'stop-sharing' })).toBeDefined()

@@ -157,7 +157,7 @@ for (const when of ['as a guest', 'while Leave is still closing the room'] as co
       if ((chunk as { kind?: string }).kind === 'text') said.push((chunk as { text: string }).text)
     refuse.on = false
     expect(own).toBe(0)
-    expect(said.join('')).toBe("\n\n_Lost the thread of Sam's reply here; it plays again below._")
+    expect(said.join('')).toBe("\n\n_여기서 Sam의 답을 놓쳤습니다. 아래에서 다시 재생됩니다._")
     expect(asked.logged.some(l => l.startsWith('Shared session: a riding step failed (throw'))).toBe(true)
     release?.()
     await leaving
@@ -196,7 +196,7 @@ test('a turn started while Stop sharing is still closing the room goes nowhere: 
   await asked.clock.advance(100)
   expect(asked.posted.filter(e => e.type === 'turn')).toEqual([])
   expect(asked.filter(a => a === 'POST /api/rooms/room0000000000000002/end')).toHaveLength(1)
-  expect(asked.logged).toContain('Stopped sharing. The link no longer works.')
+  expect(asked.logged).toContain('공유를 끝냈습니다. 이제 링크가 작동하지 않습니다.')
 })
 
 test('a step running as the host stops sharing goes on here, and none of what it writes after goes out live', async ($, on) => {
@@ -324,7 +324,7 @@ test('a start that finds a Stop sharing cut short finishes it: the room hears it
   expect(asked.state.mode).toBe('idle')
   expect(asked.state.room).toBeNull()
   expect(asked.state.closing).toBeNull()
-  expect(asked.logged.some(l => l.startsWith('Still sharing'))).toBe(false)
+  expect(asked.logged.some(l => l.startsWith('이 세션을 계속 공유하고 있습니다'))).toBe(false)
   expect(await ui.find({ key: 'share' })).toBeDefined()
 })
 
@@ -371,7 +371,7 @@ test('/share-session after a Stop sharing cut short finishes that first, then as
   const rooms = asked.filter(a => a === 'POST /api/rooms').length
   const reply = (await $.command.run({ command: 'share-session', args: '' } as never)) as { text: string }
   expect(asked.filter(a => a === `POST /api/rooms/${id}/end`)).toHaveLength(1)
-  expect(reply.text).toStartWith('This session has 2 earlier prompts.')
+  expect(reply.text).toStartWith('이 세션에는 이전 요청이 2개 있습니다.')
   expect(asked.filter(a => a === 'POST /api/rooms')).toHaveLength(rooms)
   await asked.clock.advance(100)
   expect(asked.posted.filter(e => e.type === 'row')).toHaveLength(0)
@@ -607,7 +607,7 @@ test("a reload that finds the window's proxy port taken closes the window and sa
   await asked.clock.advance(20)
   expect(asked.windowState.kills).toBe(1)
   expect(asked.launches).toHaveLength(1)
-  expect(asked.toasted.some(t => t.includes("its proxy's port (47100) was taken"))).toBe(true)
+  expect(asked.toasted.some(t => t.includes('창의 프록시 포트(47100)를 다른 프로그램이 차지했어요'))).toBe(true)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -630,7 +630,7 @@ test('a reload whose look at the window fails takes it to be there still: its pr
   expect(asked.proxies[1]!.config.port).toBe(47100)
   expect(asked.windowState).toMatchObject({ alive: true, kills: 0 })
   expect(asked.state.previewWindow).toMatchObject({ port: 47100, profile: host.split('/').pop() })
-  expect(asked.toasted.filter(t => t.startsWith('The preview window closed'))).toEqual([])
+  expect(asked.toasted.filter(t => t.startsWith('미리보기 창이 닫혔어요'))).toEqual([])
   // The looks from here on find it on its port.
   await asked.clock.advance(31_000)
   expect(asked.proxies[1]!.stopped).toBe(false)
@@ -644,7 +644,7 @@ test('a reload whose look at the window fails takes it to be there still: its pr
   ).toBe(true)
 })
 
-const WINDOW_BUSY_SAID = 'The preview window reached its connection or request limit. Close unused tabs in it or wait a minute, then reload the page.'
+const WINDOW_BUSY_SAID = '미리보기 창의 연결 수나 요청 수가 한도에 닿았어요. 창에서 쓰지 않는 탭을 닫거나 1분 뒤에 페이지를 새로 고쳐 주세요.'
 
 test("seated anew by the room, the window goes on: its failures are still said, and a refused tunnel starts again with the new seat's token", async ($, on) => {
   const refusals = { count: 0 }
@@ -667,7 +667,7 @@ test("seated anew by the room, the window goes on: its failures are still said, 
   expect(tunnels(asked).at(-1)?.token).toBe('g2')
   // Refused again: said, and only an Open reconnects it.
   asked.localHelpers[1]!.send({ state: 'channel-error', code: 'AUTH' })
-  await within(asked.clock, () => asked.toasted.some(t => t.includes("refused the preview window's connection")), 2_000)
+  await within(asked.clock, () => asked.toasted.some(t => t.includes('님 쪽에서 미리보기 창의 localhost:')), 2_000)
   expect(asked.state.previewNeedsOpen).toEqual(['pv-local'])
   // The window and its proxy went on through all of it.
   expect(asked.windowState.alive).toBe(true)
@@ -733,7 +733,7 @@ test('a reseat while Open starts the browser keeps the window it started, and sa
   expect(asked.windowState.kills).toBe(0)
   expect(asked.state.previewWindow?.opened).toEqual(['pv-local'])
   expect(asked.toasted).toContain(
-    "Opened Sam's localhost:3340 in a separate Google Chrome window. In it, localhost reaches only what Sam shares; your own servers aren't touched.",
+    'Sam님의 localhost:3340 미리보기를 별도의 Google Chrome 창에 열었어요. 이 창에서 localhost는 Sam님이 공유한 것에만 연결되고, 내 서버에는 영향이 없어요.',
   )
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -782,11 +782,11 @@ test("a window whose proxy can't start again for another reason than its port (n
   await asked.clock.advance(10)
   const ui = await $.ui.mount(band('desktop'))
   await ui.press({ key: 'open-preview' })
-  await eventually(asked.clock, () => asked.toasted.some(t => t.startsWith('Preview windows need Node')))
+  await eventually(asked.clock, () => asked.toasted.some(t => t.startsWith('미리보기 창을 쓰려면 이 컴퓨터에 Node')))
   await asked.clock.advance(10)
   // Nothing else opens it (its listeners need Node too).
   expect(asked.toasted).toContain(
-    'Preview windows need Node 22.18 or later on this computer. Install it, then press Open preview again, or choose Public link in Room → Shown.',
+    '미리보기 창을 쓰려면 이 컴퓨터에 Node 22.18 이상이 필요해요. 설치한 뒤 「미리보기 열기」를 다시 누르거나, 방의 「보여 준 것」에서 「공개 링크」를 골라 주세요.',
   )
   expect(asked.windowState.kills).toBe(0)
   expect(asked.windowState.alive).toBe(true)
@@ -807,7 +807,7 @@ test("a look for a browser that failed isn't kept: redrawing doesn't look again 
   await pane.press({ key: 'tab-settings' })
   await asked.clock.advance(10)
   expect(looks()).toBe(1)
-  expect(await pane.find({ type: 'Text', text: /separate window can't open here/ })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /여기서는 별도 창을 열 수 없습니다/ })).toBeUndefined()
   await ui.press({ key: 'open-preview' })
   await eventually(asked.clock, () => asked.launches.length)
   expect(looks()).toBe(2)
@@ -841,7 +841,7 @@ test("a reload that finds another session's window on the host's profile leaves 
   await asked.clock.advance(50)
   expect(asked.windowState.alive).toBe(true)
   expect(asked.windowState.kills).toBe(0)
-  expect(asked.toasted.filter(t => t.startsWith('The preview window closed'))).toEqual([])
+  expect(asked.toasted.filter(t => t.startsWith('미리보기 창이 닫혔어요'))).toEqual([])
   expect(asked.proxies).toHaveLength(0)
   expect(asked.state.previewWindow).toMatchObject({ port: 0, opened: [] })
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -924,9 +924,9 @@ test("a later showing of a forwarded preview moves its page, and says again what
   await eventually(asked.clock, () => asked.state.shown?.find(s => s.pid === 'pv-api')?.path === '/health')
   const app = asked.state.shown!.find(s => s.pid === 'pv-app')!,
     api = asked.state.shown!.find(s => s.pid === 'pv-api')!
-  expect(app).toMatchObject({ name: 'Account (preview)', path: '/account', ts: 902, tcp: true, host: '127.0.0.1', scheme: 'https' })
+  expect(app).toMatchObject({ name: 'Account (미리보기)', path: '/account', ts: 902, tcp: true, host: '127.0.0.1', scheme: 'https' })
   expect(app.dependency).toBeUndefined()
-  expect(api).toMatchObject({ name: 'localhost:61199 · used by localhost:61198', path: '/health', tcp: true, host: 'localhost', dependency: 61198 })
+  expect(api).toMatchObject({ name: 'localhost:61199 · localhost:61198 미리보기용', path: '/health', tcp: true, host: 'localhost', dependency: 61198 })
   expect(api.scheme).toBeUndefined()
   // The window opens the page at the origin it was forwarded at, on its newest page.
   const ui = await $.ui.mount(band('desktop'))
@@ -959,7 +959,7 @@ test("forwarding reaches a guest as the room's list says it, before any artifact
   await within(asked.clock, () => forwardedPids(asked).includes('pv-local'), 5_000)
   // How it shows stays its artifact's: the page, the address's spelling.
   expect(asked.state.shown?.find(s => s.pid === 'pv-local')).toMatchObject({
-    name: 'Sign in (preview)',
+    name: 'Sign in (미리보기)',
     path: '/login?next=%2Faccount',
     host: '127.0.0.1',
     tcp: true,
@@ -987,7 +987,7 @@ test('joining, a guest lists what the room shares though its history lost the ar
   expect(asked.state.shown![0]).toEqual({
     key: 'preview:pv-late',
     kind: 'preview',
-    name: 'Admin (preview)',
+    name: 'Admin (미리보기)',
     ts: expect.any(Number),
     pid: 'pv-late',
     port: 3342,
@@ -1006,7 +1006,7 @@ test('joining, a guest lists what the room shares though its history lost the ar
 const placeShown = (pid: string, port: number, tcp: boolean) => ({
   key: `preview:${pid}`,
   kind: 'preview',
-  name: 'App (preview)',
+  name: 'App (미리보기)',
   ts: 900,
   pid,
   port,
@@ -1043,7 +1043,7 @@ test('a reopened place takes what the room shares from its answer before its lis
   expect(asked.state.shown?.find(s => s.pid === 'pv-local')?.tcp).toBe(true)
   expect(asked.state.shown?.find(s => s.pid === 'pv-ended')).toMatchObject({ closed: true, tcp: false })
   expect((asked.state.localPreviews ?? []).map(p => p.pid)).toEqual(['pv-local'])
-  expect(asked.toasted.some(t => t.includes('forwarded again'))).toBe(false)
+  expect(asked.toasted.some(t => t.includes('다시 연결하지 못했어요'))).toBe(false)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -1223,7 +1223,7 @@ test("a need the room answers as forwarded already takes nothing up itself: the 
   await asked.clock.advance(50)
   // Nothing taken up from the answer alone, and nothing said.
   expect(forwardedPids(asked)).toEqual(['pv-local'])
-  expect(asked.toasted.some(t => t.startsWith('Your preview tried localhost:5555'))).toBe(false)
+  expect(asked.toasted.some(t => t.startsWith('내 미리보기가 localhost:5555에 접속하려 했지만'))).toBe(false)
   // The host's Allow forwarding, as the room's page says it.
   stream.push({
     seq: 4,
@@ -1234,7 +1234,7 @@ test("a need the room answers as forwarded already takes nothing up itself: the 
   })
   await within(asked.clock, () => forwardedPids(asked).includes('pv-earlier'), 5_000)
   await asked.clock.advance(20)
-  expect(asked.state.shown?.find(s => s.pid === 'pv-earlier')).toMatchObject({ name: 'Docs (preview)', path: '/docs', tcp: true })
+  expect(asked.state.shown?.find(s => s.pid === 'pv-earlier')).toMatchObject({ name: 'Docs (미리보기)', path: '/docs', tcp: true })
   expect(asked.state.shown?.find(s => s.pid === 'pv-earlier')?.dependency).toBeUndefined()
   expect(routesOf(asked)?.startable).toContain(5555)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1304,18 +1304,18 @@ test('a guest sees no Previews setting, and no browser is looked for, until the 
   const pane = await $.ui.mount(roomPane('terminal'))
   await pane.press({ key: 'tab-shown' })
   await asked.clock.advance(10)
-  expect(await pane.find({ type: 'Text', text: /^Used for/ })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: / · 사용 중$/ })).toBeUndefined()
   await pane.press({ key: 'tab-settings' })
   await asked.clock.advance(10)
   expect(await pane.find({ key: 'preview-open' })).toBeUndefined()
-  expect(await pane.find({ type: 'Text', text: /separate window can't open here/ })).toBeUndefined()
+  expect(await pane.find({ type: 'Text', text: /여기서는 별도 창을 열 수 없습니다/ })).toBeUndefined()
   expect(asked.spawned.some(s => s.input?.startsWith('# shared-session: find a browser'))).toBe(false)
   // The host forwards one: the setting shows, and why no window opens here.
   stream.push({ seq: 4, events: [{ ...LOCAL_SHOWN, seq: 4 }], people: PREVIEW_PEOPLE, ended: false, title: 'demo' })
   await within(asked.clock, () => asked.state.shown?.some(s => s.pid === 'pv-local' && s.tcp), 5_000)
   await asked.clock.advance(50)
   expect(await pane.find({ key: 'preview-open' })).toBeDefined()
-  expect(await pane.find({ type: 'Text', text: /A separate window can't open here: no Chrome/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /여기서는 별도 창을 열 수 없습니다: Chrome, Edge/ })).toBeDefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -1357,30 +1357,30 @@ test('without a preview profile folder nothing is cleaned up', async ($, on) => 
 })
 
 for (const [why, opts, reason] of [
-  ['no browser', { browser: { platform: 'Darwin', path: null } }, 'no Chrome, Edge, Brave, Chromium, Firefox, Vivaldi or Opera was found'],
-  ['no display', { browser: { platform: 'Linux', path: '/usr/bin/chromium' } }, 'there is no display for a window here'],
-  ['an SSH session', { browser: { platform: 'Darwin', path: CHROME }, env: { SSH_CONNECTION: '10.0.0.2 50000 10.0.0.1 22' } }, 'this is an SSH session'],
+  ['no browser', { browser: { platform: 'Darwin', path: null } }, 'Chrome, Edge, Brave, Chromium, Firefox, Vivaldi, Opera 중 어느 것도 찾지 못했어요'],
+  ['no display', { browser: { platform: 'Linux', path: '/usr/bin/chromium' } }, '창을 띄울 디스플레이가 없어요'],
+  ['an SSH session', { browser: { platform: 'Darwin', path: CHROME }, env: { SSH_CONNECTION: '10.0.0.2 50000 10.0.0.1 22' } }, 'SSH 세션이라'],
   ['SHARED_SESSION_NO_BROWSER', { browser: { platform: 'Darwin', path: CHROME }, env: { SHARED_SESSION_NO_BROWSER: '1' } }, 'SHARED_SESSION_NO_BROWSER=1'],
-  ['another platform', { browser: { platform: 'MINGW64_NT-10.0', path: '/c/chrome.exe' } }, 'preview windows work on macOS and Linux'],
+  ['another platform', { browser: { platform: 'MINGW64_NT-10.0', path: '/c/chrome.exe' } }, '미리보기 창은 macOS와 Linux에서만 열 수 있어요'],
   [
     'a Firefox too old',
     { browser: { platform: 'Darwin', path: '/Applications/Firefox.app', gecko: 128 } },
-    'Firefox 128 is too old for preview windows, which need Firefox 140 or newer',
+    'Firefox 128 버전은 너무 오래돼 미리보기 창에 쓸 수 없어요. Firefox 140 이상이 필요해요',
   ],
   [
     "a Firefox whose version can't be read",
     { browser: { platform: 'Linux', path: '/usr/bin/firefox', gecko: null }, env: { DISPLAY: ':0' } },
-    "Firefox's version couldn't be read, and preview windows need Firefox 140 or newer",
+    'Firefox 버전을 읽지 못했어요. 미리보기 창에는 Firefox 140 이상이 필요해요',
   ],
   [
     'a browser of neither kind',
     { browser: { platform: 'Darwin', path: '/Applications/Safari.app' } },
-    "Safari can't be used for preview windows, which need a Chromium-family browser or Firefox",
+    'Safari 브라우저는 미리보기 창에 쓸 수 없어요. Chromium 계열 브라우저나 Firefox가 필요해요',
   ],
   [
     'a profile folder too deep for Firefox on Linux',
     { browser: { platform: 'Linux', path: '/usr/bin/firefox' }, env: { DISPLAY: ':0', CLAUDE_CONFIG_DIR: `/home/scott/${'deep/'.repeat(30)}claude` } },
-    "the preview window's profile folder is too deep for Firefox on Linux (170 bytes at most",
+    '미리보기 창의 프로필 폴더 경로가 Linux의 Firefox에서 쓰기에 너무 길어요(최대 170바이트',
   ],
 ] as const) {
   test(`without a preview window (${why}), a port taken here moves the page, and the note says why there's no window, once`, async ($, on) => {
@@ -1409,14 +1409,14 @@ for (const [why, opts, reason] of [
       [3340, false],
     ])
     const note =
-      "Sam's preview opened at localhost:44321 here, not localhost:3340, which is in use on this computer, so sign-ins registered for localhost:3340 won't work. A separate window would keep Sam's addresses, but "
+      'Sam님의 미리보기가 여기서는 localhost:3340 대신 localhost:44321에서 열렸어요(이 컴퓨터에서 이미 쓰는 포트). 그래서 localhost:3340에 등록된 로그인은 작동하지 않아요. Sam님의 주소를 그대로 쓰려면 별도 창이 필요한데, 창을 열 수 없어요: '
     expect(asked.toasted.filter(t => t.startsWith(note))).toHaveLength(1)
     expect(asked.toasted.find(t => t.startsWith(note))).toContain(reason)
     expect(await ui.find({ key: 'open-preview' })).toBeUndefined()
     // Opened again from the Room: the same listener, and nothing said again.
     const pane = await $.ui.mount(roomPane('terminal'))
     await pane.press({ key: 'tab-shown' })
-    expect(await pane.find({ type: 'Text', text: "localhost:44321 here → Sam's localhost:3340" })).toBeDefined()
+    expect(await pane.find({ type: 'Text', text: '여기 localhost:44321 → Sam님의 localhost:3340' })).toBeDefined()
     await pane.press({ key: 'open-preview:pv-local' })
     await eventually(asked.clock, () => opened().length === 2)
     expect(tunnels(asked)).toHaveLength(2)
@@ -1438,7 +1438,7 @@ test("Previews: Always a separate window, in Room → Settings, opens the window
   await asked.clock.advance(10)
   const pane = await $.ui.mount(roomPane('terminal'))
   await pane.press({ key: 'tab-shown' })
-  expect(await pane.find({ type: 'Text', text: `Opens ${WINDOW_URL}` })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: `여는 주소: ${WINDOW_URL}` })).toBeDefined()
   await pane.press({ key: 'tab-settings' })
   // A terminal has no Claude's browser: the person's own, or always the window.
   const select = await pane.find({ key: 'preview-open' })
@@ -1447,7 +1447,7 @@ test("Previews: Always a separate window, in Room → Settings, opens the window
   await pane.select({ key: 'preview-open', value: 'window' })
   expect(asked.store.get('previewOpen')).toBe('window')
   await pane.press({ key: 'tab-shown' })
-  expect(await pane.find({ type: 'Text', text: `Opens ${WINDOW_URL} in a preview window` })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: `여는 주소: ${WINDOW_URL} · 미리보기 창에서` })).toBeDefined()
   await pane.press({ key: 'open-preview:pv-local' })
   await eventually(asked.clock, () => asked.launches.length)
   await asked.clock.advance(10)
@@ -1472,9 +1472,9 @@ test("in Claude Desktop, Previews offers Claude's browser, its default, then You
   const select = await room.find({ key: 'preview-open' })
   expect(select?.props.value).toBe('pane')
   expect((select?.props.options as { label: string }[]).map(o => o.label)).toEqual([
-    "Claude's browser, or a separate window when ports are taken",
-    'Your browser, or a separate window when ports are taken',
-    'Always a separate window',
+    "Claude 브라우저, 포트가 쓰이고 있으면 별도 창",
+    '내 브라우저, 포트가 쓰이고 있으면 별도 창',
+    '항상 별도 창',
   ])
   await room.select({ key: 'preview-open', value: 'browser' })
   expect(asked.store.get('previewOpen')).toBe('browser')
@@ -1483,8 +1483,8 @@ test("in Claude Desktop, Previews offers Claude's browser, its default, then You
   await eventually(asked.clock, () => asked.externals.length)
   expect(asked.externals).toEqual([LOCAL_URL])
   expect(pane).toEqual([])
-  expect(asked.toasted.filter(t => t.startsWith("Opened Sam's localhost:3340"))).toEqual([
-    "Opened Sam's localhost:3340 in your browser. While you're in the room, localhost:3340 here reaches Sam's, your cookies for it included; Close in Room → Shown, or Leave, frees it.",
+  expect(asked.toasted.filter(t => t.startsWith('Sam님의 localhost:3340 페이지를'))).toEqual([
+    'Sam님의 localhost:3340 페이지를 내 브라우저에서 열었어요. 방에 있는 동안 여기 localhost:3340 주소는 Sam님 쪽으로 연결되고, 쿠키도 함께 전달돼요. 방의 공유 목록에서 닫기나 나가기를 누르면 연결이 풀려요.',
   ])
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -1501,27 +1501,27 @@ test("auto mode refusing Claude's browser: the person's own opens, it's said onc
   expect(pane).toEqual([LOCAL_URL])
   expect(asked.externals).toEqual([LOCAL_URL])
   const refused =
-    "Auto mode doesn't let the plugin open previews in Claude's browser, so they open in your browser. Press Allow previews in Claude, in Room → Settings, to let it."
+    '자동 모드에서는 플러그인이 Claude 브라우저에서 미리보기를 열 수 없어서 내 브라우저에서 열어요. 방의 설정 탭에서 「Claude에서 미리보기 허용」을 누르면 열 수 있어요.'
   expect(asked.toasted.filter(t => t === refused)).toHaveLength(1)
-  expect(asked.toasted.filter(t => t.startsWith("Opened Sam's localhost:3340 in your browser."))).toHaveLength(1)
+  expect(asked.toasted.filter(t => t.startsWith('Sam님의 localhost:3340 페이지를 내 브라우저에서 열었어요.'))).toHaveLength(1)
   // Not tried again while no rule lets it: the next Open goes straight to the person's own.
   await room.press({ key: 'open-preview:pv-local' })
   await eventually(asked.clock, () => asked.externals.length === 2)
   expect(pane).toHaveLength(1)
   expect(asked.externals).toEqual([LOCAL_URL, LOCAL_URL])
   expect(asked.toasted.filter(t => t === refused)).toHaveLength(1)
-  expect((await room.find({ key: 'tab-settings' }))?.props.label).toBe('Settings ●')
+  expect((await room.find({ key: 'tab-settings' }))?.props.label).toBe('설정 ●')
   await room.press({ key: 'tab-settings' })
   // What else the rule lets, said beside its button.
-  expect(await room.find({ type: 'Text', text: /also lets your own Claude open pages in Claude's browser without auto mode's review/ })).toBeDefined()
+  expect(await room.find({ type: 'Text', text: /내 Claude도 자동 모드 검토 없이 Claude 브라우저에서 페이지를 열 수 있게 됩니다/ })).toBeDefined()
   await room.press({ key: 'allow-pane' })
   await asked.clock.advance(10)
   const settings = JSON.parse(asked.files.get('/home/scott/.claude/settings.json') ?? '{}')
   expect(settings.permissions.allow).toEqual(['Bash(npm test)', 'mcp__Claude_Browser__preview_start'])
   expect(settings.model).toBe('opus') // the rest kept
-  expect(asked.toasted).toContain("Previews in Claude allowed: the next one opens in Claude's browser.")
+  expect(asked.toasted).toContain("Claude에서 미리보기를 허용했어요: 다음 미리보기부터 Claude 브라우저에서 열려요.")
   expect(await room.find({ key: 'allow-pane' })).toBeUndefined()
-  expect((await room.find({ key: 'tab-settings' }))?.props.label).toBe('Settings')
+  expect((await room.find({ key: 'tab-settings' }))?.props.label).toBe('설정')
   // Let through now: the next Open goes to Claude's browser.
   pane.refuse(false)
   await room.press({ key: 'tab-shown' })
@@ -1599,7 +1599,7 @@ test("with CLAUDE_CONFIG_DIR set, Updates read back from the settings there, and
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-settings' })
   expect((await pane.find({ key: 'updates' }))?.props.value).toBe('auto')
-  expect(await pane.find({ type: 'Text', text: /runs the copy installed from your local marketplace folder/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /로컬 마켓플레이스 폴더에 설치된 사본을 실행해서/ })).toBeDefined()
 })
 
 test("with CLAUDE_CONFIG_DIR set, the update command a guest types says what it installed, from Claude Code's plugins there", async ($, on) => {
@@ -1623,8 +1623,8 @@ test("with CLAUDE_CONFIG_DIR set, the update command a guest types says what it 
     wait: false,
   })
   await asked.clock.advance(100)
-  expect(asked.logged.some(l => l.startsWith('Shared Sessions 9.9.9 is installed here. Start a new session to use it'))).toBe(true)
-  expect(asked.logged.some(l => l.includes('up to date here'))).toBe(false)
+  expect(asked.logged.some(l => l.startsWith('공유 세션 9.9.9 버전이 설치되었습니다. 새 세션을 시작하면 적용됩니다'))).toBe(true)
+  expect(asked.logged.some(l => l.includes('최신 버전입니다'))).toBe(false)
 })
 
 test("a rule for Claude's browser added by hand lets the next Open try it again", async ($, on) => {
@@ -1672,8 +1672,8 @@ test("a shared page Claude's browser refuses opens in the Files pane, said once 
   await asked.clock.advance(200)
   expect(calls.filter(c => c === 'Claude_Browser.preview_start')).toHaveLength(1)
   expect(calls.filter(c => c === 'ccd_view.show_pane')).toHaveLength(2)
-  expect(asked.toasted.filter(t => t.startsWith("Auto mode doesn't let the plugin open"))).toEqual([
-    "Auto mode doesn't let the plugin open shared pages in Claude's browser, so they open in the Files pane. Press Allow previews in Claude, in Room → Settings, to let it.",
+  expect(asked.toasted.filter(t => t.startsWith('자동 모드에서는 플러그인이 Claude 브라우저에서'))).toEqual([
+    '자동 모드에서는 플러그인이 Claude 브라우저에서 공유 페이지를 열 수 없어서 파일 창에서 열어요. 방의 설정 탭에서 「Claude에서 미리보기 허용」을 누르면 열 수 있어요.',
   ])
 })
 
@@ -1702,8 +1702,8 @@ for (const [where, opts, opens] of [
     expect(asked.externals).toEqual(opens ? [LOCAL_URL, PUBLIC_URL] : [])
     expect(asked.copied).toEqual(opens ? [] : [LOCAL_URL, PUBLIC_URL])
     if (!opens) {
-      expect(asked.toasted).toContain(`Sam's preview is ready at ${LOCAL_URL}: the address is copied.`)
-      expect(asked.toasted).toContain('Public preview link copied: open it within 10 minutes')
+      expect(asked.toasted).toContain(`Sam님의 미리보기가 ${LOCAL_URL}에 준비됐어요. 주소를 복사했어요.`)
+      expect(asked.toasted).toContain('공개 미리보기 링크를 복사했어요. 10분 안에 열어 주세요')
     }
     await $.command.run({ command: 'stop-sharing', args: '' } as never)
   })
@@ -1737,7 +1737,7 @@ test('a preview window that fails to start, with Previews: Always a separate win
   await asked.clock.advance(10)
   const ui = await $.ui.mount(band('desktop'))
   await ui.press({ key: 'open-preview' })
-  const failed = "Couldn't open the preview window: Google Chrome didn't start. To open Sam's localhost:3340 without one, change Previews in Room → Settings."
+  const failed = '미리보기 창을 열지 못했어요: Google Chrome 브라우저가 시작되지 않았어요. 창 없이 Sam님의 localhost:3340 페이지를 열려면 방의 설정 탭에서 미리보기 설정을 바꾸세요.'
   await eventually(asked.clock, () => asked.toasted.includes(failed))
   expect(asked.toasted).toContain(failed)
   // Neither Claude's browser nor the person's own: their cookies and servers stay apart from Sam's until they say.
@@ -1758,9 +1758,9 @@ for (const [why, opts, reason] of [
   [
     'no browser here can open one',
     { browser: { platform: 'Darwin', path: '/Applications/Safari.app' } },
-    "Safari can't be used for preview windows, which need a Chromium-family browser or Firefox",
+    'Safari 브라우저는 미리보기 창에 쓸 수 없어요. Chromium 계열 브라우저나 Firefox가 필요해요',
   ],
-  ['the look for a browser failing', { detectFails: { count: 2 } }, "looking for a browser here didn't work (it's tried again at the next Open)"],
+  ['the look for a browser failing', { detectFails: { count: 2 } }, "이 컴퓨터에서 브라우저를 찾지 못했어요(다음에 「열기」를 누르면 다시 찾아요)"],
 ] as const) {
   test(`Previews: Always a separate window, with no window possible (${why}), opens nothing else, and says how to open it without one`, async ($, on) => {
     const asked = windowWorld(on, opts as Parameters<typeof world>[1])
@@ -1770,7 +1770,7 @@ for (const [why, opts, reason] of [
     const ui = await $.ui.mount(band('desktop'))
     await asked.clock.advance(10)
     await ui.press({ key: 'open-preview' })
-    const failed = `Couldn't open the preview window: ${reason}. To open Sam's localhost:3340 without one, change Previews in Room → Settings.`
+    const failed = `미리보기 창을 열지 못했어요: ${reason}. 창 없이 Sam님의 localhost:3340 페이지를 열려면 방의 설정 탭에서 미리보기 설정을 바꾸세요.`
     await eventually(asked.clock, () => asked.toasted.includes(failed))
     await asked.clock.advance(10)
     // Neither Claude's browser nor the person's own, nor the host's numbers taken here.
@@ -1793,7 +1793,7 @@ test("with Previews: Always a separate window, Shown says the page opens in a pr
   await asked.clock.advance(20)
   // The look failed: nothing's known, and the line still says where it opens.
   expect(asked.spawned.some(s => s.input?.startsWith('# shared-session: find a browser'))).toBe(true)
-  expect(await pane.find({ type: 'Text', text: `Opens ${WINDOW_URL} in a preview window` })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: `여는 주소: ${WINDOW_URL} · 미리보기 창에서` })).toBeDefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -1807,7 +1807,7 @@ test('with Previews: Always a separate window and none possible here, Shown says
   expect(
     await pane.find({
       type: 'Text',
-      text: `Opens ${WINDOW_URL} in a preview window, which can't open here: Safari can't be used for preview windows, which need a Chromium-family browser or Firefox. Change Previews in Settings to open it without one.`,
+      text: `여는 주소: ${WINDOW_URL} · 미리보기 창이 여기서 열리지 않습니다: Safari 브라우저는 미리보기 창에 쓸 수 없어요. Chromium 계열 브라우저나 Firefox가 필요해요. 설정의 「미리보기」를 바꾸면 창 없이 열 수 있습니다.`,
     }),
   ).toBeDefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1833,10 +1833,10 @@ test('a port taken here and a preview window that fails to start: the page opens
     [0, false],
     [3340, false],
   ])
-  expect(asked.toasted.filter(t => t.startsWith("Sam's preview opened"))).toEqual([
-    "Sam's preview opened at localhost:44321 here, not localhost:3340, which is in use on this computer, so sign-ins registered for localhost:3340 won't work. A separate window would keep Sam's addresses, but Google Chrome didn't start.",
+  expect(asked.toasted.filter(t => t.startsWith('Sam님의 미리보기가'))).toEqual([
+    'Sam님의 미리보기가 여기서는 localhost:3340 대신 localhost:44321에서 열렸어요(이 컴퓨터에서 이미 쓰는 포트). 그래서 localhost:3340에 등록된 로그인은 작동하지 않아요. Sam님의 주소를 그대로 쓰려면 별도 창이 필요한데, 창을 열 수 없어요: Google Chrome 브라우저가 시작되지 않았어요.',
   ])
-  expect(asked.toasted.some(t => t.startsWith("Couldn't open the preview window"))).toBe(false)
+  expect(asked.toasted.some(t => t.startsWith('미리보기 창을 열지 못했어요'))).toBe(false)
   expect(asked.state.localPreviews).toEqual([{ pid: 'pv-local', port: 3340, localPort: 44321 }])
   expect(asked.proxies.every(p => p.stopped)).toBe(true)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1856,7 +1856,7 @@ test('a port taken here and a preview window not seen within ten seconds: nothin
   await ui.press({ key: 'open-preview' })
   await eventually(asked.clock, () => asked.launches.length)
   const said =
-    "Google Chrome didn't open a preview window within 10 seconds. If none opens, free localhost:3340 on this computer and press Open preview to open it in Claude's browser instead."
+    'Google Chrome 브라우저가 10초 안에 미리보기 창을 열지 않았어요. 창이 열리지 않으면 이 컴퓨터에서 localhost:3340 포트를 비운 뒤 「미리보기 열기」를 누르면 Claude 브라우저에서 열려요.'
   await within(asked.clock, () => asked.toasted.includes(said), 12_000)
   expect(asked.toasted).toContain(said)
   // It may still show: nothing moves the page meanwhile.
@@ -1889,7 +1889,7 @@ test("a page open in the window, whose window then fails to start, opens at the 
   await room.press({ key: 'open-preview:pv-local' })
   await eventually(asked.clock, () => pane.length)
   expect(asked.launches).toHaveLength(2)
-  expect(asked.toasted).toContain("Couldn't open the preview window: Google Chrome didn't start.")
+  expect(asked.toasted).toContain('미리보기 창을 열지 못했어요: Google Chrome 브라우저가 시작되지 않았어요.')
   expect(pane).toEqual([LOCAL_URL])
   expect(tunnels(asked).at(-1)).toMatchObject({ port: 3340, strict: true })
   // The window is still open: its proxy stays for its other tabs.

@@ -140,7 +140,7 @@ test("the approver answers the cloud host's question above the prompt, and the r
   expect(await within(asked.clock, () => asked.state.cloudAsks?.length === 1, 5_000)).toBe(true)
   expect(asked.state.cloud).toMatchObject({ state: 'running', mine: true })
   const row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /wants the cloud host to run/ }))?.text).toBe('Alex wants the cloud host to run Bash npm test')
+  expect((await row.find({ type: 'Text', text: /님이 클라우드 세션에 실행 요청/ }))?.text).toBe('Alex님이 클라우드 세션에 실행 요청: Bash npm test')
   await row.press({ key: 'cloud-once' })
   await asked.clock.advance(50)
   expect(asked.posted.filter(e => e.type === 'answer').map(e => e.body)).toEqual([{ id: 'q1', answer: 'Allow once' }])
@@ -149,7 +149,7 @@ test("the approver answers the cloud host's question above the prompt, and the r
   lines.push({ seq: 5, events: [ask('q2', 'Bash rm -rf build', 5)], people: CLOUD_PEOPLE, ended: false, title: 'demo', cloud: IN_CLOUD })
   expect(await within(asked.clock, () => asked.state.cloudAsks?.length === 1, 5_000)).toBe(true)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
-  expect(await pane.find({ type: 'Text', text: 'In the cloud' })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: '클라우드에서 실행 중' })).toBeDefined()
   expect(await pane.find({ key: 'cloud-ask-once-q2' })).toBeDefined()
   expect(await pane.find({ key: 'cloud-home' })).toBeDefined()
   lines.push({
@@ -278,14 +278,14 @@ test("the approver is asked whether to share the cloud host's page, above the pr
     id: 's1',
     kind: 'show',
     port: 3340,
-    what: "Share the cloud host's localhost:3340 with the room?",
+    what: '방에 클라우드 세션의 localhost:3340 공유할까요?',
     always: '',
     options: ['Share', 'Not now'],
   })
   const row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /cloud host's localhost/ }))?.text).toBe("Share the cloud host's localhost:3340 with the room?")
+  expect((await row.find({ type: 'Text', text: /클라우드 세션의 localhost/ }))?.text).toBe('방에 클라우드 세션의 localhost:3340 공유할까요?')
   expect(await row.find({ key: 'cloud-once' })).toBeUndefined()
-  expect((await row.find({ key: 'cloud-yes' }))?.props.label).toBe('Share')
+  expect((await row.find({ key: 'cloud-yes' }))?.props.label).toBe('공유하기')
   await row.press({ key: 'cloud-yes' })
   await asked.clock.advance(50)
   expect(asked.posted.filter(e => e.type === 'answer').map(e => e.body)).toEqual([{ id: 's1', answer: 'Share' }])
@@ -293,7 +293,7 @@ test("the approver is asked whether to share the cloud host's page, above the pr
   // The next, in the Room too, said as it comes; taken back, it goes.
   lines.push({ seq: 5, events: [show('s2', 3341, 5)], people: CLOUD_PEOPLE, ended: false, title: 'demo', cloud: IN_CLOUD })
   expect(await within(asked.clock, () => asked.state.cloudAsks?.length === 1, 5_000)).toBe(true)
-  expect(asked.toasted).toContain("Share the cloud host's localhost:3341 with the room? Answer above the prompt")
+  expect(asked.toasted).toContain('방에 클라우드 세션의 localhost:3341 공유할까요? 입력창 위에서 답해 주세요')
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   expect(await pane.find({ key: 'cloud-ask-yes-s2' })).toBeDefined()
   expect(await pane.find({ key: 'cloud-ask-not-now-s2' })).toBeDefined()
@@ -471,13 +471,13 @@ test("the approver hears what their yes came to at the cloud host: shared, or th
   const lines = liveLines(cloudPage(2, []))
   const asked = await approverHere($, on, lines)
   lines.push(cloudPage(3, [done(3, { id: 's1', done: true, kind: 'show', shared: [3340], failed: [] })]))
-  expect(await eventually(asked.clock, () => asked.toasted.includes('The cloud host is sharing localhost:3340 with the room through its link.'))).toBe(true)
+  expect(await eventually(asked.clock, () => asked.toasted.includes('클라우드 세션이 localhost:3340 포트를 링크로 방에 공유하고 있어요.'))).toBe(true)
   lines.push(cloudPage(4, [done(4, { id: 'm1', done: true, kind: 'mention', shared: [], failed: [3340] })]))
-  expect(await eventually(asked.clock, () => asked.toasted.includes("The cloud host couldn't forward localhost:3340 to teammates."))).toBe(true)
+  expect(await eventually(asked.clock, () => asked.toasted.includes('클라우드 세션이 localhost:3340 포트를 손님에게 전달하지 못했어요.'))).toBe(true)
   lines.push(cloudPage(5, [done(5, { id: 'r1', done: true, kind: 'related', shared: [3610], failed: [3611] })]))
   expect(
     await eventually(asked.clock, () =>
-      asked.toasted.includes("Teammates can reach the cloud host's localhost:3610 now. The cloud host couldn't forward localhost:3611 to teammates."),
+      asked.toasted.includes('이제 손님이 클라우드 세션의 localhost:3610 포트에 들어올 수 있어요. 클라우드 세션이 localhost:3611 포트를 손님에게 전달하지 못했어요.'),
     ),
   ).toBe(true)
   // Taken back unanswered: nothing to say.
@@ -503,8 +503,8 @@ test("the approver is asked the cloud host's questions about its localhost as th
   const asked = await approverHere($, on, lines)
   expect(await within(asked.clock, () => asked.state.cloudAsks?.length === 1, 5_000)).toBe(true)
   const row = await $.ui.mount(band('desktop'))
-  expect((await row.find({ type: 'Text', text: /^Let guests open/ }))?.text).toBe("Let guests open the cloud host's localhost:3340 at the same address?")
-  expect((await row.find({ key: 'cloud-yes' }))?.props.label).toBe('Allow')
+  expect((await row.find({ type: 'Text', text: /^손님도 / }))?.text).toBe('손님도 클라우드 세션의 localhost:3340에 같은 주소로 들어오게 할까요?')
+  expect((await row.find({ key: 'cloud-yes' }))?.props.label).toBe('허용')
   await row.press({ key: 'cloud-yes' })
   await asked.clock.advance(50)
   expect(asked.posted.filter(e => e.type === 'answer').map(e => e.body)).toEqual([{ id: 'm1', answer: 'Allow' }])
@@ -524,10 +524,10 @@ test("the approver is asked the cloud host's questions about its localhost as th
     ]),
   )
   expect(await within(asked.clock, () => asked.state.cloudAsks?.[0]?.id === 'r1', 5_000)).toBe(true)
-  expect((await row.find({ type: 'Text', text: /^Share localhost/ }))?.text).toBe(
-    "Share localhost:3610 and 3611 too? convex-local-backend, beside the cloud host's localhost:3340",
+  expect((await row.find({ type: 'Text', text: /^localhost:.*도 공유할까요/ }))?.text).toBe(
+    'localhost:3610, 3611도 공유할까요? convex-local-backend, 사용하는 페이지 클라우드 세션의 localhost:3340',
   )
-  expect((await row.find({ key: 'cloud-yes' }))?.props.label).toBe('Share too')
+  expect((await row.find({ key: 'cloud-yes' }))?.props.label).toBe('함께 공유')
   await row.press({ key: 'cloud-yes' })
   await asked.clock.advance(50)
   // A teammate's window: their name in their color, in the Room too.
@@ -536,10 +536,10 @@ test("the approver is asked the cloud host's questions about its localhost as th
   )
   expect(await within(asked.clock, () => asked.state.cloudAsks?.[0]?.id === 'n1', 5_000)).toBe(true)
   expect((await row.find({ type: 'Text', text: /^Alex$/ }))?.props.bold).toBe(true)
-  expect(await row.find({ type: 'Text', text: "'s preview needs the cloud host's localhost:3610 · convex-local-backend" })).toBeDefined()
-  expect(asked.toasted).toContain("Alex's preview needs the cloud host's localhost:3610 · convex-local-backend: answer above the prompt")
+  expect(await row.find({ type: 'Text', text: '님의 미리보기가 클라우드 세션의 localhost:3610 · convex-local-backend에 접속하려고 해요' })).toBeDefined()
+  expect(asked.toasted).toContain('Alex님의 미리보기가 클라우드 세션의 localhost:3610 · convex-local-backend에 접속하려고 해요: 입력창 위에서 답해 주세요')
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
-  expect((await pane.find({ key: 'cloud-ask-yes-n1' }))?.props.label).toBe('Share')
+  expect((await pane.find({ key: 'cloud-ask-yes-n1' }))?.props.label).toBe('공유하기')
   await pane.press({ key: 'cloud-ask-not-now-n1' })
   await asked.clock.advance(50)
   expect(asked.posted.filter(e => e.type === 'answer').map(e => e.body)).toEqual([
@@ -567,7 +567,7 @@ test("the approver sets the cloud host's settings in the Room, and asks it again
   expect(await within(asked.clock, () => asked.state.cloudAsks?.length === 1, 5_000)).toBe(true)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-settings' })
-  expect(await pane.find({ type: 'Text', text: 'at the cloud host' })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: '클라우드 세션에서' })).toBeDefined()
   expect(((await pane.find({ key: 'policy-approvals' }))?.props.options as { value: string }[]).map(o => o.value)).toEqual(['edits', 'all'])
   await pane.select({ key: 'policy-approvals', value: 'all' })
   await pane.select({ key: 'policy-prompts', value: 'watch' })
@@ -581,7 +581,7 @@ test("the approver sets the cloud host's settings in the Room, and asks it again
   await row.press({ key: 'cloud-always' })
   await asked.clock.advance(50)
   expect(asked.state.cloudTrusted).toEqual(['Alex'])
-  expect(await pane.find({ type: 'Text', text: 'Always allowed: Alex' })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: '항상 허용: Alex' })).toBeDefined()
   await pane.press({ key: 'untrust' })
   await asked.clock.advance(50)
   expect(asked.posted.filter(e => e.type === 'set').map(e => e.body)).toEqual([{ approvals: 'all' }, { prompts: 'watch' }, { untrust: true }])
@@ -614,7 +614,7 @@ test("the approver's Always allowed survives their session closing and reopening
   expect(asked.state.cloudTrusted).toEqual(['Alex'])
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-settings' })
-  expect(await pane.find({ type: 'Text', text: 'Always allowed: Alex' })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: '항상 허용: Alex' })).toBeDefined()
   await pane.press({ key: 'untrust' })
   await asked.clock.advance(50)
   expect(asked.posted.filter(e => e.type === 'set').map(e => e.body)).toEqual([{ untrust: true }])
@@ -813,5 +813,5 @@ test('Bring home takes the host back here with the cloud host’s changes', asyn
   const applied = asked.spawned.find(s => s.input?.includes('git apply --check'))!
   expect(applied.input).toContain(`/files/${'c'.repeat(64)}`)
   expect(applied.input).toContain('Authorization: Bearer t-home')
-  expect(await eventually(asked.clock, () => asked.logged.some(l => /with the cloud host's changes to 2 files/.test(l)))).toBe(true)
+  expect(await eventually(asked.clock, () => asked.logged.some(l => /클라우드 세션이 바꾼 파일 2개를 프로젝트에 반영했습니다/.test(l)))).toBe(true)
 })

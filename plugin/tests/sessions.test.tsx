@@ -79,7 +79,7 @@ test('a session reopened after a compaction shares its whole history, from the f
   const ui = await $.ui.mount(band('desktop'))
   await ui.press({ key: 'share' })
   await ui.press({ key: 'share-prompt' })
-  expect(await ui.find({ type: 'Text', text: 'Share this session?' })).toBeDefined() // it has prompts: asks first
+  expect(await ui.find({ type: 'Text', text: '이 세션을 공유할까요?' })).toBeDefined() // it has prompts: asks first
   await ui.press({ key: 'share-all' })
   await asked.clock.advance(100)
   const texts = asked.posted.filter(e => e.type === 'row').map(e => e.body.text)
@@ -129,7 +129,7 @@ test('a guest saves a page and the files beside it in a folder of its own, and o
   await asked.clock.advance(10)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-shown' })
-  expect(await pane.find({ type: 'Text', text: /index\.html \(a page and 1 file\)/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /index\.html \(페이지 1개, 파일 1개\)/ })).toBeDefined()
   await pane.press({ key: 'open-seq:2' })
   await asked.clock.advance(200)
   const dir = `/tmp/demo/.shared-session/Sam/page-${'b'.repeat(8)}`
@@ -193,7 +193,7 @@ test('the update command a guest types runs on their computer, never at the host
   expect(asked.posted.some(e => e.type === 'prompt')).toBe(false)
   const run = asked.spawned.find(s => s.input?.includes('plugin update shared-session@claude-share'))
   expect(run?.input).toContain("export HOME='/home/scott'")
-  expect(asked.logged.some(l => /up to date here|is installed here/.test(l))).toBe(true)
+  expect(asked.logged.some(l => /최신 버전입니다|설치되/.test(l))).toBe(true)
 })
 
 test('the Room says who runs an older plugin, and the host hears it once with the command', async ($, on) => {
@@ -209,9 +209,9 @@ test('the Room says who runs an older plugin, and the host hears it once with th
   await ui.press({ key: 'share-prompt' })
   await asked.clock.advance(20_000)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
-  expect(await pane.find({ type: 'Text', text: /^on 0\.6\.0 · update to / })).toBeDefined()
-  expect(await pane.find({ type: 'Text', text: /^on 0\.7\.1 · update to / })).toBeUndefined()
-  const said = asked.logged.filter(l => l.startsWith('Alex runs Shared Sessions 0.6.0'))
+  expect(await pane.find({ type: 'Text', text: /^0\.6\.0 사용 중 · / })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /^0\.7\.1 사용 중 · / })).toBeUndefined()
+  const said = asked.logged.filter(l => l.startsWith('Alex님은 공유 세션 0.6.0 버전을 쓰고'))
   expect(said.length).toBe(1)
   expect(said[0]).toContain('claude plugin marketplace update claude-share')
 })
@@ -292,7 +292,7 @@ test('a guest message whose attachments never come through still goes, and says 
   await asked.clock.advance(9_000)
   const sent = asked.posted.find(e => e.type === 'prompt')
   expect(sent?.body.text).toBe('What is this?')
-  expect(asked.logged.some(l => l.startsWith("An attachment didn't go with this message"))).toBe(true)
+  expect(asked.logged.some(l => l.startsWith('첨부 파일 1개가 이 메시지와 함께 가지 못했습니다'))).toBe(true)
 })
 
 test('a guest can choose to be asked before what the host shows opens', async ($, on) => {
@@ -316,8 +316,8 @@ test('Share in a session with history asks first; "Only from now on" sends none 
     await ui.press({ key: 'share' })
     await ui.press({ key: 'share-prompt' })
     expect(asked).not.toContain('POST /api/rooms') // nothing leaves until they choose
-    expect(await ui.find({ type: 'Text', text: 'Share this session?' })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /2 earlier prompts/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: '이 세션을 공유할까요?' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /이전 요청 2개/ })).toBeDefined()
     await ui.press({ key: 'share-cancel' })
     expect(await ui.find({ key: 'share' })).toBeDefined()
     await ui.unmount()
@@ -339,7 +339,7 @@ test('"Share everything" sends the history', async ($, on) => {
   await ui.press({ key: 'share-all' })
   await asked.clock.advance(100)
   expect(asked.posted.filter(e => e.type === 'row').length).toBeGreaterThan(0)
-  expect((await ui.find({ type: 'Text', text: /^Sharing$/ }))?.props.bold).toBe(true)
+  expect((await ui.find({ type: 'Text', text: /^공유 중$/ }))?.props.bold).toBe(true)
 })
 
 test("a subagent's run is no new prompt for the room, and the host's own turn still ends", async ($, on) => {
@@ -430,7 +430,7 @@ test("a page the host's Claude opens with browser_batch goes to the room, once t
       { name: 'computer', input: { action: 'screenshot' } },
     ],
   } as never)
-  expect(await hostAsked(ui)).toBe('Share localhost:5173 with the room?')
+  expect((await ui.find({ type: 'Text', text: /^방에 localhost:.* 공유할까요\?/ }))?.text).toBe('방에 localhost:5173 공유할까요?')
   await allowShow(asked, ui, 5173)
   await asked.clock.advance(200)
   const shown = asked.posted.find(e => e.type === 'artifact')
@@ -443,8 +443,8 @@ test("a room this session can't reach says it is reconnecting", async ($, on) =>
   await asked.clock.advance(5_000)
   for (const surface of SURFACES) {
     const ui = await $.ui.mount(band(surface))
-    expect(await ui.find({ type: 'Text', text: /Reconnecting/ })).toBeDefined()
-    expect(await ui.find({ type: 'Text', text: /goes out once it's back/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /다시 연결 중/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /다시 연결되면 보낸 내용이 전달됩니다/ })).toBeDefined()
     await ui.unmount()
   }
 })
@@ -468,7 +468,7 @@ test('a stream quiet for 35 s is given up, says Reconnecting at once, and opens 
   expect([streams(), connection()]).toEqual([2, 'reconnecting'])
   for (const surface of SURFACES) {
     const ui = await $.ui.mount(band(surface))
-    expect(await ui.find({ type: 'Text', text: /Reconnecting/ })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: /다시 연결 중/ })).toBeDefined()
     await ui.unmount()
   }
   // The room answers on the new one: live again.
@@ -521,12 +521,12 @@ test('every request says the plugin version, and a newer one shows in the Room w
   await asked.clock.advance(10)
   expect(asked.versions.length).toBeGreaterThan(0)
   expect(asked.versions.every(v => v === '0.7.1')).toBe(true)
-  expect(asked.logged.some(line => line.includes('9.9.9 is out'))).toBe(true)
+  expect(asked.logged.some(line => line.includes('공유 세션 9.9.9 버전이 나왔습니다'))).toBe(true)
   const pane = await $.ui.mount({ plugin: 'shared-session', surface: 'desktop', component: 'Pane', requestId: 'shared-room', props: PANE })
   await pane.press({ key: 'tab-settings' })
-  expect(await pane.find({ type: 'Text', text: /Version 9\.9\.9 is out \(this session runs 0\.7\.1\)/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /9\.9\.9 버전 출시 \(이 세션은 0\.7\.1\)/ })).toBeDefined()
   // Updates off: it installs for new sessions, and offers to load later ones in place.
-  expect((await pane.find({ key: 'update-now' }))?.props.label).toBe('Install update')
+  expect((await pane.find({ key: 'update-now' }))?.props.label).toBe('업데이트 설치')
   expect(await pane.find({ key: 'updates-on' })).toBeDefined()
 })
 
@@ -547,7 +547,7 @@ test("the Room's Update runs the update command on this computer and says on its
   const run = asked.spawned.find(s => s.input?.includes('plugin update shared-session@claude-share'))
   expect(run?.input).toContain('plugin marketplace update claude-share')
   const said =
-    'Shared Sessions 9.9.9 is installed here. Start a new session to use it (in Claude Desktop, quit and reopen the app); with Updates on in the Room, later releases load in place.'
+    '공유 세션 9.9.9 버전이 설치되었습니다. 새 세션을 시작하면 적용됩니다(Claude Desktop에서는 앱을 종료했다가 다시 여세요). 방 설정에서 업데이트를 자동으로 켜 두면 이후 새 버전은 바로 적용됩니다.'
   expect(await pane.find({ type: 'Text', text: said })).toBeDefined()
   expect(asked.logged).toContain(said)
   // Two minutes on, the line goes.
@@ -563,8 +563,8 @@ test("the Team panel's header says a newer release is out, with its Update", asy
   await $.command.run({ command: 'team' } as never)
   await asked.clock.advance(10)
   const pane = await $.ui.mount(TEAM_PANE)
-  expect(await pane.find({ type: 'Text', text: '● 9.9.9 is out' })).toBeDefined()
-  expect((await pane.find({ key: 'update-now' }))?.props.label).toBe('Install update')
+  expect(await pane.find({ type: 'Text', text: '● 9.9.9 버전 출시' })).toBeDefined()
+  expect((await pane.find({ key: 'update-now' }))?.props.label).toBe('업데이트 설치')
   // The header keeps to the button: Turn on Updates is the Room's.
   expect(await pane.find({ key: 'updates-on' })).toBeUndefined()
 })
@@ -583,7 +583,7 @@ test("the Room's Updates setting turns on auto-update in the person's settings, 
   // …and in place: a copy of the plugin in a folder every session loads and watches.
   expect(asked.spawned.some(s => s.input?.includes("live='/home/scott/.claude/shared-session/plugin'"))).toBe(true)
   expect(saved.env).toEqual({ CLAUDE_CODE_PLUGIN_DIRS: '/home/scott/.claude/shared-session/plugin', CLAUDE_CODE_PLUGIN_DIR_WATCH: '1' })
-  expect(await pane.find({ type: 'Text', text: /next new session on, a release loads in place/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /다음 새 세션부터 새 버전이 다시 시작 없이 그 자리에서 적용됩니다/ })).toBeDefined()
   // Off again: the folder isn't named, the person's other settings stay.
   await pane.select({ key: 'updates', value: 'manual' })
   const after = JSON.parse(asked.written.at(-1)?.text ?? '{}')
@@ -602,7 +602,7 @@ test('automatic updates chosen outside the Room (setup.ts) load in place, keepin
   await asked.clock.advance(10)
   const saved = JSON.parse(asked.written.at(-1)?.text ?? '{}')
   expect(saved.env.CLAUDE_CODE_PLUGIN_DIRS).toBe('/home/scott/mods/other:/home/scott/.claude/shared-session/plugin')
-  expect(asked.logged.some(l => l.includes('updates in place'))).toBe(true)
+  expect(asked.logged.some(l => l.includes('제자리에서 업데이트'))).toBe(true)
 })
 
 for (const role of ['host', 'guest'] as const) {
@@ -643,7 +643,7 @@ test("a custom configuration's places are its own, and an unrelated session's st
   })
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   await $.session.start(START)
-  expect(asked.logged).toContain(`Still sharing this session: ${mine.room.url}`)
+  expect(asked.logged).toContain(`이 세션을 계속 공유하고 있습니다: ${mine.room.url}`)
   expect(savedAt(asked, 'hosting:other', config)).toEqual(other)
   expect([...asked.files.keys()].some(path => path.startsWith('/home/scott/.claude/shared-session/rooms/'))).toBe(false)
 })
@@ -667,7 +667,7 @@ test('a failed new checkpoint write leaves the previous file intact and reports 
   asked.checkpointWrites.fail = true
   await $.session.end({ reason: 'other', sessionId: 'session-test-0001', resume: {} } as never)
   expect(asked.files.get(path)).toBe(previous)
-  expect(asked.logged.some(line => line.includes("Couldn't save the shared session for reopening"))).toBe(true)
+  expect(asked.logged.some(line => line.includes('공유한 세션을 다시 열 수 있게 저장하지 못했습니다'))).toBe(true)
 })
 
 test('a host session reopened takes its room back, on the same link', async ($, on) => {
@@ -678,14 +678,14 @@ test('a host session reopened takes its room back, on the same link', async ($, 
   on('session.start', ($, e) => ({ cwd: e.cwd }))
   await $.session.start(START)
   await asked.clock.advance(10)
-  expect(asked.logged).toContain('Still sharing this session: http://localhost:8787/s/room0000000000000009')
+  expect(asked.logged).toContain('이 세션을 계속 공유하고 있습니다: http://localhost:8787/s/room0000000000000009')
 })
 
 // A room saved on a plain http server elsewhere isn't taken up again, a
 // host's or a guest's: its token would go with the first request. (One on
 // this computer is: the test above.)
 const PLAIN_SAVED =
-  "This session's room is on http://share.test, plain http, which would send its tokens unencrypted, so it isn't taken up again. Share or join again through an https:// server."
+  '이 세션의 방은 암호화되지 않은 http 서버(http://share.test)에 있어 토큰이 암호화 없이 전송되므로 다시 이어 가지 않습니다. https:// 서버로 다시 공유하거나 참여하세요.'
 
 const tokenWent = (asked: ReturnType<typeof world>, token: string) => [
   ...asked.sent.filter(x => JSON.stringify(x.headers).includes(token) || JSON.stringify(x.body).includes(token)),
@@ -770,12 +770,12 @@ for (const role of ['guest', 'host'] as const) {
       // Not in the room: the resume wrote nothing after the session's end.
       expect(asked.state.mode ?? 'idle').toBe('idle')
       expect(asked.state.room ?? null).toBeNull()
-      expect(asked.logged.some(l => l.startsWith('Still sharing') || l.startsWith('Back in'))).toBe(false)
+      expect(asked.logged.some(l => l.startsWith('이 세션을 계속 공유하고') || l.includes('님의 세션으로 돌아왔습니다'))).toBe(false)
     })
   }
 }
 
-const SHARING_9 = `Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000009`
+const SHARING_9 = `이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000009`
 
 // A room given up told it's over in the background (a host's ends, a guest
 // leaves): one curl, bounded in time, its token on stdin, never in argv.
@@ -815,7 +815,7 @@ test("/share-session while this session's room is being taken back makes no seco
   expect(asked).not.toContain('POST /api/rooms')
   expect(asked.state.room?.id).toBe('room0000000000000009')
   expect(asked.state.mode).toBe('host')
-  expect(asked.logged).toContain('Still sharing this session: http://localhost:8787/s/room0000000000000009')
+  expect(asked.logged).toContain('이 세션을 계속 공유하고 있습니다: http://localhost:8787/s/room0000000000000009')
   expect(await ui.find({ key: 'stop-sharing' })).toBeDefined()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -841,9 +841,9 @@ test('/share-session while a room being taken back turns out gone waits for that
   held.release!()
   await starting
   expect(await within(asked.clock, () => reply, 3_000)).toEqual({
-    text: 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002',
+    text: '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002',
   })
-  expect(asked.logged).toContain('The session you shared ended while this one was closed.')
+  expect(asked.logged).toContain('이 세션이 닫혀 있는 동안 공유하던 세션이 끝났습니다.')
   expect(asked.state.room?.id).toBe('room0000000000000002')
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -866,7 +866,7 @@ test("a room whose take-back hasn't come back in 10 s is ended for /share-sessio
   expect(asked).not.toContain('POST /api/rooms')
   expect(toldOver(asked, saved.room)).toHaveLength(0)
   await within(asked.clock, () => reply, 3_000)
-  expect(reply).toEqual({ text: 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002' })
+  expect(reply).toEqual({ text: '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002' })
   // Given up, it's over: the room ends (one bounded request, its token on
   // stdin), and its place isn't saved again for a start to take back.
   expect(toldOver(asked, saved.room)).toHaveLength(1)
@@ -901,7 +901,7 @@ test("a link pasted while this session's place in a room is being taken back wai
   await eventually(asked.clock, () => asked.state.room?.id === 'room0000000000000003')
   // Back in the first room, then left for the second, as in a room.
   const at = (call: string) => asked.indexOf(call)
-  expect(asked.logged).toContain("Back in Sam's session.")
+  expect(asked.logged).toContain('Sam님의 세션으로 돌아왔습니다.')
   expect(at('POST /api/rooms/room0000000000000001/leave')).toBeGreaterThan(at('GET /api/rooms/room0000000000000001/events'))
   expect(at('POST /api/rooms/room0000000000000003/join')).toBeGreaterThan(at('POST /api/rooms/room0000000000000001/leave'))
   expect(asked.state.mode).toBe('guest')
@@ -965,7 +965,7 @@ test("an invite shown while this session's room is being taken back offers no Jo
   const starting = $.session.start(START)
   await eventually(asked.clock, () => Boolean(held.release))
   const row = await $.ui.mount(band('desktop'))
-  expect(await row.find({ type: 'Text', text: 'Sam invites you' })).toBeDefined()
+  expect(await row.find({ type: 'Text', text: 'Sam님이 초대했습니다' })).toBeDefined()
   expect(await row.find({ key: 'invite-join' })).toBeUndefined()
   expect(await row.find({ key: 'invite-dismiss' })).toBeDefined()
   held.release!()
@@ -1035,7 +1035,7 @@ for (const role of ['host', 'guest'] as const) {
       await asked.clock.advance(50)
       expect(asked.state.mode).toBe(role)
       expect(asked.state.room?.id).toBe(saved.room.id)
-      expect(asked.logged).toContain(role === 'host' ? `Still sharing this session: ${saved.room.url}` : "Back in Sam's session.")
+      expect(asked.logged).toContain(role === 'host' ? `이 세션을 계속 공유하고 있습니다: ${saved.room.url}` : 'Sam님의 세션으로 돌아왔습니다.')
       await $.command.run({ command: 'stop-sharing', args: '' } as never)
     })
   }
@@ -1068,7 +1068,7 @@ test("a link pasted while this session's place in a room is slow to come back wa
   await starting
   await asked.clock.advance(50)
   expect(asked.state.room?.id).toBe('room0000000000000003')
-  expect(asked.logged).not.toContain("Back in Sam's session.")
+  expect(asked.logged).not.toContain('Sam님의 세션으로 돌아왔습니다.')
   expect(asked.filter(a => a.includes('room0000000000000001'))).toEqual(['GET /api/rooms/room0000000000000001/events'])
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
@@ -1108,7 +1108,7 @@ for (const which of ['team', 'invite'] as const) {
     await asked.clock.advance(50)
     expect(asked.state.mode).toBe('host')
     expect(asked.state.room?.id).toBe('room0000000000000009')
-    expect(asked.logged).toContain(`Still sharing this session: ${saved.room.url}`)
+    expect(asked.logged).toContain(`이 세션을 계속 공유하고 있습니다: ${saved.room.url}`)
     await $.command.run({ command: 'stop-sharing', args: '' } as never)
   })
 }
@@ -1210,7 +1210,7 @@ for (const answer of ['share-cancel', 'share-all'] as const) {
       expect(asked.filter(a => a.includes('room0000000000000009'))).toEqual(['GET /api/rooms/room0000000000000009/events'])
     } else {
       expect(asked.state.room?.id).toBe('room0000000000000009')
-      expect(asked.logged).toContain(`Still sharing this session: ${saved.room.url}`)
+      expect(asked.logged).toContain(`이 세션을 계속 공유하고 있습니다: ${saved.room.url}`)
       expect(asked).not.toContain('POST /api/rooms')
     }
     await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1232,8 +1232,8 @@ test("/share-session with earlier prompts while this session's room is late comi
   await asked.clock.advance(9_000)
   expect(reply).toBeUndefined()
   await within(asked.clock, () => reply, 3_000)
-  expect(reply?.text).toContain('This session has 1 earlier prompt.')
-  expect(reply?.text).toContain('`/share-session all` shares the session as it is')
+  expect(reply?.text).toContain('이 세션에는 이전 요청이 1개 있습니다.')
+  expect(reply?.text).toContain('`/share-session all`: 지금까지의 내용을 포함해 공유합니다')
   expect(asked.state.asking).toEqual({ prompts: 1, teammates: 'everyone' })
   expect(toldOver(asked, saved.room)).toHaveLength(0)
   expect(asked).not.toContain('POST /api/rooms')
@@ -1242,7 +1242,7 @@ test("/share-session with earlier prompts while this session's room is late comi
     shared = r
   })
   await within(asked.clock, () => shared, 3_000)
-  expect(shared).toEqual({ text: 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002' })
+  expect(shared).toEqual({ text: '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002' })
   expect(toldOver(asked, saved.room)).toHaveLength(1)
   held.release!()
   await starting
@@ -1285,15 +1285,15 @@ for (const how of ['press', 'command'] as const) {
       void $.command.run({ command: 'share-session', args: '' } as never).then(r => {
         reply = r
       })
-    await within(asked.clock, () => (how === 'press' ? asked.toasted.includes('Link copied') : reply), 3_000)
+    await within(asked.clock, () => (how === 'press' ? asked.toasted.includes('링크를 복사했어요') : reply), 3_000)
     await starting
     await asked.clock.advance(50)
     expect(asked).not.toContain('POST /api/rooms')
     expect(asked.state.mode).toBe('host')
     expect(asked.state.room?.id).toBe('room0000000000000009')
     expect(toldOver(asked, saved.room)).toHaveLength(0)
-    if (how === 'command') expect(reply).toEqual({ text: `Sharing this session. Anyone with this link can join and prompt this session: ${saved.room.url}` })
-    else expect(asked.toasted).toContain('Link copied')
+    if (how === 'command') expect(reply).toEqual({ text: `이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: ${saved.room.url}` })
+    else expect(asked.toasted).toContain('링크를 복사했어요')
     await $.command.run({ command: 'stop-sharing', args: '' } as never)
   })
 }
@@ -1351,7 +1351,7 @@ test("a link pasted while this session's place in a room is late coming back, wh
   await starting
   await asked.clock.advance(50)
   expect(asked.state.room ?? null).toBeNull()
-  expect(asked.logged).not.toContain("Back in Sam's session.")
+  expect(asked.logged).not.toContain('Sam님의 세션으로 돌아왔습니다.')
   expect(asked.filter(a => a.includes('room0000000000000001'))).toEqual(['GET /api/rooms/room0000000000000001/events'])
   expect(toldOver(asked, JOINED_PLACE.room, 'leave')).toHaveLength(0)
   expect(savedAt(asked, key)).toEqual(saved)
@@ -1397,7 +1397,7 @@ test("/share-session in a fresh session whose room is late coming back, its new 
     reply = r
   })
   expect(await within(asked.clock, () => reply, 12_000)).toEqual({
-    text: "Couldn't share: Too many new shared sessions from your network. Try again in a minute.",
+    text: "공유하지 못했습니다: Too many new shared sessions from your network. Try again in a minute.",
   })
   expect(asked).toContain('POST /api/rooms')
   expect(asked.state.room ?? null).toBeNull()
@@ -1414,7 +1414,7 @@ test("/share-session in a fresh session whose room is late coming back, its new 
   await asked.clock.advance(50)
   expect(asked.state.mode).toBe('host')
   expect(asked.state.room?.id).toBe('room0000000000000009')
-  expect(asked.logged).toContain(`Still sharing this session: ${saved.room.url}`)
+  expect(asked.logged).toContain(`이 세션을 계속 공유하고 있습니다: ${saved.room.url}`)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -1458,7 +1458,7 @@ for (const reason of ['other', 'clear'] as const) {
       await starting
       await within(asked.clock, () => reply, 3_000)
       await asked.clock.advance(50)
-      expect(reply?.text.startsWith(then === 'made' ? 'Sharing this session.' : "Couldn't share:")).toBe(true)
+      expect(reply?.text.startsWith(then === 'made' ? '이 세션을 공유합니다.' : '공유하지 못했습니다:')).toBe(true)
       // Settled at the end: told nothing more, and never saved again.
       expect(toldOver(asked, saved.room)).toHaveLength(0)
       expect(ended()).toHaveLength(reason === 'clear' ? 1 : 0)
@@ -1499,7 +1499,7 @@ for (const role of ['guest', 'host'] as const) {
       await $.turn.complete({ turnId, isAborted: false, durationMs: 0, reason: 'answer' } as never)
       return said.join('')
     }
-    const note = "Still getting back into **Sam**'s session, so this didn't go to Claude. Send it again in a moment."
+    const note = '아직 **Sam**님 세션에 다시 연결하는 중이라 Claude에게 보내지 않았습니다. 잠시 뒤 다시 보내세요.'
     // Typed in the take-back's first 10 s: it waits them out.
     const typed = $.prompt.submit({ text: 'Run the tests', origin: { kind: 'composer' }, wait: false })
     const went = (text: string) => () => asked.submitted.some(p => p.text === text)
@@ -1598,7 +1598,7 @@ test("another of the guest's sessions' message kept here waits for the place too
   for await (const chunk of $.turn.step({ ...STEP, turnId: 'kept' } as never))
     if ((chunk as { kind?: string }).kind === 'text') said.push((chunk as { text: string }).text)
   await $.turn.complete({ turnId: 'kept', isAborted: false, durationMs: 0, reason: 'answer' } as never)
-  expect(said.join('')).toContain('stayed here')
+  expect(said.join('')).toContain('여기 남겨 두었습니다')
   expect(own).toBe(0)
   expect(asked.posted.some(e => e.type === 'prompt')).toBe(false)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1613,8 +1613,8 @@ test("another session's message delivered mid-turn that stays here is a toast, a
   await asked.clock.advance(50)
   const busy = FROM_AGENT.replace('sent a message:', 'sent a message while you were working:')
   const result = await $.prompt.submit({ text: busy, origin: { kind: 'peer' }, isMeta: true, wait: false } as never)
-  expect(result).toMatchObject({ drop: expect.stringContaining('stayed here') })
-  expect(asked.toasted.some(t => t.includes('A message from Agent composition experience stayed here'))).toBe(true)
+  expect(result).toMatchObject({ drop: expect.stringContaining('여기 남겨 두었습니다') })
+  expect(asked.toasted.some(t => t.includes('Agent composition experience에서 온 메시지는 여기 남겨 두었습니다'))).toBe(true)
   expect(asked.posted.some(e => e.type === 'prompt')).toBe(false)
 })
 
@@ -1662,7 +1662,7 @@ test("a note given while this session's place in a room is late coming back is i
   await within(asked.clock, () => asked.submitted.some(p => p.text === 'Run the tests'), 1_000)
   await typed
   await $.turn.start({ turnId: 'mine', text: 'Run the tests' })
-  const note = "Still getting back into **Sam**'s session, so this didn't go to Claude. Send it again in a moment."
+  const note = '아직 **Sam**님 세션에 다시 연결하는 중이라 Claude에게 보내지 않았습니다. 잠시 뒤 다시 보내세요.'
   expect(await step('mine', 0)).toBe(note)
   expect(await stop(note)).toEqual({})
   expect(stopHook).toBe(0)
@@ -1710,7 +1710,7 @@ test("/team join while this session's place in a room is being taken back waits 
   expect(asked.some(a => a.includes('room0000000000000101'))).toBe(false)
   held.release!()
   await starting
-  expect(await within(asked.clock, () => reply, 3_000)).toEqual({ text: 'Joining demo: work 1.' })
+  expect(await within(asked.clock, () => reply, 3_000)).toEqual({ text: '참여하는 중: demo: work 1' })
   expect(asked.externals).toEqual([`claude://code/new?q=${encodeURIComponent('http://localhost:8787/s/room0000000000000101')}`])
   expect(asked.some(a => a.includes('room0000000000000101/join'))).toBe(false)
   expect(asked.state.room?.id).toBe('room0000000000000001')
@@ -1732,13 +1732,13 @@ test('Shares at once make one room: the others wait for it, then answer as a ses
   await Promise.all([...commands, ...presses])
   await asked.clock.advance(50)
   expect(asked.filter(a => a === 'POST /api/rooms')).toHaveLength(1)
-  const sharing = 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002'
+  const sharing = '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002'
   expect(replies).toEqual([{ text: sharing }, { text: sharing }])
   expect(asked.state.mode).toBe('host')
   expect(asked.state.room?.id).toBe('room0000000000000002')
   // The one that made it says it's sharing; the rest, sharing already, copy its link.
-  expect(asked.toasted.filter(t => t.startsWith('Sharing'))).toEqual(['Sharing · link copied'])
-  expect(asked.toasted.filter(t => t === 'Link copied')).toHaveLength(3)
+  expect(asked.toasted.filter(t => t.startsWith('공유 중'))).toEqual(['공유 중 · 링크를 복사했어요'])
+  expect(asked.toasted.filter(t => t === '링크를 복사했어요')).toHaveLength(3)
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
   // Stopped, the next Share makes a room of its own.
   await $.command.run({ command: 'share-session', args: '' } as never)
@@ -1757,7 +1757,7 @@ test('/share-session all and /share-session at once, with earlier prompts: one r
   await within(asked.clock, () => replies.length === 2, 5_000)
   await asked.clock.advance(50)
   expect(asked.filter(a => a === 'POST /api/rooms')).toHaveLength(1)
-  const sharing = 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002'
+  const sharing = '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002'
   expect(replies).toEqual([{ text: sharing }, { text: sharing }])
   expect(asked.state.asking ?? null).toBeNull()
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1782,9 +1782,9 @@ test("the share question's Share everything at the same moment as /share-session
   await pressed
   await asked.clock.advance(50)
   expect(asked.filter(a => a === 'POST /api/rooms')).toHaveLength(1)
-  expect(reply).toEqual({ text: 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002' })
-  expect(asked.toasted.filter(t => t.startsWith('Sharing'))).toEqual(['Sharing · link copied'])
-  expect(asked.toasted).toContain('Link copied')
+  expect(reply).toEqual({ text: '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002' })
+  expect(asked.toasted.filter(t => t.startsWith('공유 중'))).toEqual(['공유 중 · 링크를 복사했어요'])
+  expect(asked.toasted).toContain('링크를 복사했어요')
   await $.command.run({ command: 'stop-sharing', args: '' } as never)
 })
 
@@ -1816,7 +1816,7 @@ test(
     expect(await eventually(asked.clock, () => looked)).toBe(true)
     const second = run()
     await Promise.all([first, second])
-    const sharing = 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002'
+    const sharing = '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002'
     expect(replies).toEqual([{ text: sharing }, { text: sharing }])
     expect(asked.filter(a => a === 'POST /api/rooms')).toHaveLength(1)
     await $.command.run({ command: 'stop-sharing', args: '' } as never)
@@ -1842,7 +1842,7 @@ test(
     let told = false
     const beforeTell = () => (told ? Promise.resolve() : ((told = true), slow()))
     const asked = world(on, { realSleep: true, transcripts: {}, beforeSet, beforeTell })
-    const sharing = { text: 'Sharing this session. Anyone with this link can join and prompt this session: http://localhost:8787/s/room0000000000000002' }
+    const sharing = { text: '이 세션을 공유합니다. 링크가 있는 사람은 누구나 참여해서 Claude에게 요청할 수 있습니다: http://localhost:8787/s/room0000000000000002' }
     expect(await $.command.run({ command: 'share-session', args: '' } as never)).toEqual(sharing)
     const stops: unknown[] = [],
       shares: unknown[] = []
@@ -1857,7 +1857,7 @@ test(
     const second = run('stop-sharing', stops)
     const again = run('share-session', shares)
     await Promise.all([first, second, again])
-    const stopped = { text: 'Stopped sharing. The link no longer works.' }
+    const stopped = { text: '공유를 끝냈습니다. 이제 링크로 들어올 수 없습니다.' }
     expect(stops).toEqual([stopped, stopped])
     expect(shares).toEqual([sharing])
     expect(asked.filter(a => a === 'POST /api/rooms')).toHaveLength(2)

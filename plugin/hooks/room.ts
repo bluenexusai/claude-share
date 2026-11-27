@@ -132,8 +132,8 @@ function whole(lines: string[]): string {
   return [...kept.slice(0, start), `@@ -${head[1]},${old} +${head[2]},${neu} @@`, ...body].join('\n')
 }
 
-/** "41s", "2m 3s". */
+/** 「41초」, 「2분 3초」. */
 export function took(ms: number): string {
   const s = Math.max(0, Math.round(ms / 1000))
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`
+  return s < 60 ? `${s}초` : `${Math.floor(s / 60)}분 ${s % 60}초`
 }

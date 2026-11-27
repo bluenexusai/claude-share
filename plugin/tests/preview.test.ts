@@ -84,13 +84,13 @@ test("discovery's answer: web servers beside the shared one, six at most, labels
       { port: 3611, label: '' },
       { port: 27017, label: 'mongod' },
     ]),
-  ).toBe('localhost:3610 · convex-local-backend, localhost:3611 and localhost:27017 · mongod')
+  ).toBe('localhost:3610 · convex-local-backend, localhost:3611, localhost:27017 · mongod')
   expect(
     alsoUses([
       { port: 3610, label: 'convex-local-backend' },
       { port: 3611, label: 'api' },
     ]),
-  ).toBe('localhost:3610 · convex-local-backend and localhost:3611 · api')
+  ).toBe('localhost:3610 · convex-local-backend, localhost:3611 · api')
   expect(alsoUses([{ port: 3610, label: 'convex-local-backend' }])).toBe('localhost:3610 · convex-local-backend')
   expect(everyName([])).toBe('')
 })
@@ -169,16 +169,16 @@ test('what discovery found is asked about by service: one process, else one labe
     ]).map(g => g.map(x => x.port)),
   ).toEqual([[3510, 3511], [3611], [4000], [4001], [5000], [5001]])
   // Every port before the label, so a row too narrow cuts the label first.
-  expect(alsoUses([s(3510, 'convex-local-backend'), s(3511, 'convex-local-backend')])).toBe('localhost:3510 and 3511 · convex-local-backend')
-  expect(alsoUses([s(3510, 'x'), s(3511, 'x'), s(3512, 'x')])).toBe('localhost:3510, 3511 and 3512 · x')
+  expect(alsoUses([s(3510, 'convex-local-backend'), s(3511, 'convex-local-backend')])).toBe('localhost:3510, 3511 · convex-local-backend')
+  expect(alsoUses([s(3510, 'x'), s(3511, 'x'), s(3512, 'x')])).toBe('localhost:3510, 3511, 3512 · x')
   // A comma before the last "and" once a service has several ports; none needed otherwise.
   expect(alsoUses([s(3510, 'convex-local-backend'), s(3511, 'convex-local-backend'), s(3611, 'api')])).toBe(
-    'localhost:3510 and 3511 · convex-local-backend, and localhost:3611 · api',
+    'localhost:3510, 3511 · convex-local-backend, localhost:3611 · api',
   )
   expect(everyService([[s(3510, 'convex-local-backend'), s(3511, 'convex-local-backend')], [s(3611, 'api')]], false)).toBe(
-    'localhost:3510 and 3511, and localhost:3611',
+    'localhost:3510, 3511, localhost:3611',
   )
-  expect(everyService([[s(3610, 'a')], [s(3611, 'b')]], false)).toBe('localhost:3610 and localhost:3611')
+  expect(everyService([[s(3610, 'a')], [s(3611, 'b')]], false)).toBe('localhost:3610, localhost:3611')
 })
 
 test('a question names first every port its yes forwards, three at most, then what runs there and the page', () => {
@@ -191,20 +191,20 @@ test('a question names first every port its yes forwards, three at most, then wh
     [4, 5, 6],
   ])
   expect(questionsOf([])).toEqual([])
-  expect(shareTooWords(3009, [s(3510), s(3511)])).toBe('Share localhost:3510 and 3511 too? convex-local-backend, beside localhost:3009')
-  expect(shareTooWords(3009, [s(3510), s(3511), s(3512)])).toBe('Share localhost:3510, 3511 and 3512 too? convex-local-backend, beside localhost:3009')
+  expect(shareTooWords(3009, [s(3510), s(3511)])).toBe('localhost:3510, 3511도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3009')
+  expect(shareTooWords(3009, [s(3510), s(3511), s(3512)])).toBe('localhost:3510, 3511, 3512도 공유할까요? convex-local-backend, 사용하는 페이지 localhost:3009')
   // Nothing to call it (no label, or one discovery couldn't name): where it was found.
-  expect(shareTooWords(3009, [s(4000, ''), s(4001, 'unknown')])).toBe('Share localhost:4000 and 4001 too? Found beside localhost:3009')
+  expect(shareTooWords(3009, [s(4000, ''), s(4001, 'unknown')])).toBe('localhost:4000, 4001도 공유할까요? 사용하는 페이지 localhost:3009')
   // A question asked before a service was one process: every label it holds.
-  expect(shareTooWords(3340, [s(3610), s(3611, 'api')])).toBe('Share localhost:3610 and 3611 too? convex-local-backend and api, beside localhost:3340')
+  expect(shareTooWords(3340, [s(3610), s(3611, 'api')])).toBe('localhost:3610, 3611도 공유할까요? convex-local-backend, api, 사용하는 페이지 localhost:3340')
   // Up to its last port, a question fits the 41 columns an 80-column
   // terminal's row gives its words, five-digit ports and all.
   const questions = questionsOf([[65535, 65534, 65533, 65532, 65531, 65530, 65529].map(port => s(port))])
   expect(questions.map(q => q.length)).toEqual([3, 3, 1])
   for (const question of questions) {
     const words = shareTooWords(65000, question)
-    expect(words.slice(0, words.indexOf(' too?'))).toBe(`Share localhost:${everyName(question.map(q => String(q.port)))}`)
-    expect(words.indexOf(' too?')).toBeLessThanOrEqual(41)
+    expect(words.slice(0, words.indexOf('도 공유할까요?'))).toBe(`localhost:${everyName(question.map(q => String(q.port)))}`)
+    expect(words.indexOf('도 공유할까요?')).toBeLessThanOrEqual(41)
   }
 })
 
@@ -214,8 +214,8 @@ test("a dependency names the page that uses it, or none when that isn't known", 
   for (const value of [undefined, null, false, 0, 65536, 3.5, '61198', {}]) expect(dependencyOf(value)).toBeUndefined()
   expect(dependencyTitle(61199, 'host-api.cjs')).toBe('localhost:61199 (host-api.cjs)')
   expect(dependencyTitle(61199)).toBe('localhost:61199')
-  expect(dependencyFor(61198)).toBe('for the preview of localhost:61198')
-  expect(dependencyFor(true)).toBe('for previews')
+  expect(dependencyFor(61198)).toBe('localhost:61198 미리보기용')
+  expect(dependencyFor(true)).toBe('미리보기용')
 })
 
 test("a look at a port's `/` shares a page, never an API, a 404, a debugger or what isn't HTTP", () => {
