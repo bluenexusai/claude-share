@@ -349,6 +349,8 @@ declare module 'claude-code' {
       chat: ShareChat[]
       /** Chat lines that arrived while the Room panel was closed. */
       unread: number
+      /** Who else is writing now, by seat: their name, and until when it shows (TYPING_SHOW_MS past their last word of it). */
+      typing: Record<string, { who: string; until: number }>
       policy: SharePolicy
       /** Guests whose tool calls the host allowed for the rest of the session. */
       trusted: ShareTrust[]
