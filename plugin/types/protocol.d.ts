@@ -44,6 +44,7 @@ export type RoomEventBodies = {
   chat: Fields<{ text?: string }>
   react: Fields<{ key?: string; emoji?: string }>
   seen: Fields<{ keys?: string[] }>
+  typing: Fields<{ on?: boolean }>
   // The room's own.
   join: Fields<{}>
   leave: Fields<{ reason?: string }>
@@ -53,8 +54,8 @@ export type RoomEventBodies = {
 }
 export type RoomEventType = keyof RoomEventBodies
 /** What each seat may post (the room's HOST_TYPES and GUEST_TYPES). */
-export type HostEventType = 'row' | 'delta' | 'turn' | 'approval' | 'title' | 'policy' | 'declined' | 'chat' | 'artifact' | 'react' | 'seen' | 'ask'
-export type GuestEventType = 'prompt' | 'stop' | 'chat' | 'react' | 'seen' | 'answer' | 'set'
+export type HostEventType = 'row' | 'delta' | 'turn' | 'approval' | 'title' | 'policy' | 'declined' | 'chat' | 'artifact' | 'react' | 'seen' | 'ask' | 'typing'
+export type GuestEventType = 'prompt' | 'stop' | 'chat' | 'react' | 'seen' | 'answer' | 'set' | 'typing'
 export type PostedEventType = HostEventType | GuestEventType
 
 /** One event in a room's feed: its `type` says its `body`'s shape. */

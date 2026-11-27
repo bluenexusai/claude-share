@@ -83,7 +83,8 @@ export const maxOf = (url: URL) => {
 // Claude never reads it. `policy` is the host's say over what guests may do;
 // `declined` answers a guest prompt the host's policy turned away. `react` is
 // someone's reaction to one of Claude's replies, and `seen` the replies that
-// came on someone's screen, each filed under the reply's key.
+// came on someone's screen, each filed under the reply's key. `typing` says
+// someone is writing (or stopped): passed on, never stored.
 export const HOST_TYPES = new Set<HostEventType>([
   'row',
   'delta',
@@ -97,11 +98,12 @@ export const HOST_TYPES = new Set<HostEventType>([
   'react',
   'seen',
   'ask',
+  'typing',
 ])
 // `answer`: the cloud host's approver answering an `ask`; `set`: the approver
 // changing the cloud host's settings, which the host's own Room changes at
 // home. Both from the approver's seats alone.
-export const GUEST_TYPES = new Set<GuestEventType>(['prompt', 'stop', 'chat', 'react', 'seen', 'answer', 'set'])
+export const GUEST_TYPES = new Set<GuestEventType>(['prompt', 'stop', 'chat', 'react', 'seen', 'answer', 'set', 'typing'])
 const REACTIONS = new Set(['👍', '🎉', '👀'])
 const REPLY_KEY = /^[a-z0-9]{1,16}\.\d{1,5}$/
 
@@ -114,7 +116,7 @@ export function tidyMark(type: string, body: JsonObject | undefined): JsonObject
   const keys = Array.isArray(body?.keys) ? body.keys.filter((k: unknown) => REPLY_KEY.test(String(k))).slice(0, 100) : []
   return keys.length ? { keys } : null
 }
-export const LIVE_TYPES = new Set(['delta'])
+export const LIVE_TYPES = new Set(['delta', 'typing'])
 
 export const ROOM_ID = /^[A-Za-z0-9_-]{16,64}$/
 
