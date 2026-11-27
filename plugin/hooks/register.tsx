@@ -154,6 +154,13 @@ const POLL_IDLE_MS = 1_500
 const HOT_FOR_MS = 15_000
 const RIDE_WAIT_MS = 600 // a riding turn waits this long for news at a time
 const TAIL_CHARS = 600
+// Someone writing: said again every TYPING_RESEND_MS while there's text, and
+// shown TYPING_SHOW_MS past the last time it was said (a dropped "stopped"
+// ends on its own). One older than TYPING_STALE_MS (a reconnect's catch-up)
+// isn't shown at all.
+const TYPING_RESEND_MS = 3_000
+const TYPING_SHOW_MS = 6_000
+const TYPING_STALE_MS = 15_000
 
 // Tools a guest's turn runs without asking the host (policy `edits`): they only read.
 const READ_ONLY = new Set([
@@ -188,6 +195,7 @@ const workingA = atom({ plugin: 'shared-session', key: 'working' } as const, nul
 const activityA = atom({ plugin: 'shared-session', key: 'activity' } as const, [] as ShareActivity[])
 const chatA = atom({ plugin: 'shared-session', key: 'chat' } as const, [] as ShareChat[])
 const unreadA = atom({ plugin: 'shared-session', key: 'unread' } as const, 0)
+const typingA = atom({ plugin: 'shared-session', key: 'typing' } as const, {} as Record<string, { who: string; until: number }>)
 const policyA = atom({ plugin: 'shared-session', key: 'policy' } as const, DEFAULT_POLICY)
 const trustedA = atom({ plugin: 'shared-session', key: 'trusted' } as const, [] as ShareTrust[])
 const ownersA = atom({ plugin: 'shared-session', key: 'owners' } as const, {} as Record<string, ShareOwner>)
@@ -1347,7 +1355,11 @@ const deltaKind = (body: Record<string, unknown>) => (typeof body.text === 'stri
 
 function send($: $, type: PostedEventType, body: Record<string, unknown>) {
   const last = outbox.at(-1)
-  if (type === 'delta' && last?.type === 'delta' && last.body.turnId === body.turnId && deltaKind(last.body) === deltaKind(body)) {
+  const waiting = type === 'typing' ? outbox.find(item => item.type === 'typing') : undefined
+  if (waiting) {
+    // Only the newest says anything: writing, or stopped.
+    waiting.body = body
+  } else if (type === 'delta' && last?.type === 'delta' && last.body.turnId === body.turnId && deltaKind(last.body) === deltaKind(body)) {
     // Pieces waiting for the next post join up; a draft's newest line replaces the last.
     const kind = deltaKind(body)
     last.body = kind === 'drafting' ? body : { ...last.body, [kind]: `${last.body[kind]}${body[kind]}` }
@@ -1355,7 +1367,7 @@ function send($: $, type: PostedEventType, body: Record<string, unknown>) {
     outbox.push({ type, body })
   }
   scheduleFlush($, type === 'delta' ? 250 : 30)
-  if (type !== 'delta') {
+  if (type !== 'delta' && type !== 'typing') {
     void $.clock.now().then(now => {
       lastActivity = now
     })
@@ -1509,7 +1521,7 @@ async function flush($: $) {
       singly = 0
     } else {
       // Keep what matters and try again; live text is not worth replaying.
-      outbox.unshift(...batch.filter(item => item.type !== 'delta'))
+      outbox.unshift(...batch.filter(item => item.type !== 'delta' && item.type !== 'typing'))
       retry = !reseated
       if (reseated) scheduleFlush($, 0)
     }
@@ -1531,7 +1543,7 @@ async function flush($: $) {
 // it play here as they come.
 function tooLarge($: $, batch: { type: string; body: Record<string, unknown> }[]) {
   if (batch.length > 1) {
-    const again = batch.filter(item => item.type !== 'delta')
+    const again = batch.filter(item => item.type !== 'delta' && item.type !== 'typing')
     outbox.unshift(...again)
     singly = again.length
     return
@@ -1906,6 +1918,7 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
     }
     case 'prompt':
       if (typeof body.text === 'string') await note({ ts: event.ts, who, kind: 'prompt', text: body.text })
+      if (live && !mine) await heardTyping($, event.from.seat ?? who, who, false, event.ts)
       if (live && !mine && mode === 'host') nudgeSidebar($)
       break
     case 'stop':
@@ -1938,8 +1951,12 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
       if (mode === 'host' && live) settleCloudAnswer(body)
       else if (mode === 'guest') await update($, cloudAsksA, list => list.filter(a => a.id !== body.id))
       break
+    case 'typing':
+      if (live && !mine) await heardTyping($, event.from.seat ?? who, who, body.on === true, event.ts)
+      break
     case 'chat':
       if (typeof body.text === 'string') {
+        if (live && !mine) await heardTyping($, event.from.seat ?? who, who, false, event.ts)
         if (live && !mine) await noteMention($, room, who, body.text, 'chat')
         const line: ShareChat = { ts: event.ts, who, seat: event.from.seat, text: body.text }
         await update($, chatA, list => [...list, line].slice(-100))
@@ -10365,6 +10382,88 @@ async function postChat($: $, text: string) {
   const line = text.trim()
   if (!line) return
   send($, 'chat', { text: line.slice(0, 2000) })
+  void noteTyping($, '').catch(() => {})
+}
+
+// What this person is writing, to the room as one flag: on while the prompt
+// box or the Room's chat holds text (said again every TYPING_RESEND_MS),
+// off once it's sent or emptied. Never the text itself. Nothing goes alone
+// in the room. Claude Desktop's own prompt box tells a plugin nothing as
+// it's typed in (`prompt.edit` is the terminal's), so there only the Room's
+// chat says so.
+let typingOn = false
+let typingAt = 0
+async function noteTyping($: $, text: string) {
+  const writing = text.trim().length > 0
+  if (!writing && !typingOn) return
+  const now = await $.clock.now()
+  if (writing && typingOn && now - typingAt < TYPING_RESEND_MS) return
+  const mode = await read($, modeA)
+  if (mode === 'idle' || !(await read($, roomA))) {
+    typingOn = false
+    return
+  }
+  if (writing && (await read($, peopleA)).filter(p => p.online).length < 2) return
+  typingOn = writing
+  typingAt = now
+  send($, 'typing', { on: writing })
+}
+
+// Someone else writing, or stopped: shown until TYPING_SHOW_MS past their
+// last word of it, then swept (`sweepTyping`).
+async function heardTyping($: $, seat: string, who: string, on: boolean, ts: number) {
+  const now = await $.clock.now()
+  const showing = on && now - ts < TYPING_STALE_MS
+  const had = Boolean((await read($, typingA))[seat])
+  if (!showing && !had) return
+  await update($, typingA, all => {
+    const { [seat]: _gone, ...rest } = all
+    return showing ? { ...rest, [seat]: { who, until: now + TYPING_SHOW_MS } } : rest
+  })
+  if (showing) scheduleTypingSweep($)
+}
+
+let typingSweep: ReturnType<$['clock']['after']> | null = null
+function scheduleTypingSweep($: $) {
+  if (typingSweep) return
+  typingSweep = $.clock.after(1_000, () => {
+    typingSweep = null
+    void sweepTyping($)
+  })
+}
+async function sweepTyping($: $) {
+  const now = await $.clock.now()
+  const all = await read($, typingA)
+  const left = Object.fromEntries(Object.entries(all).filter(([, t]) => t.until > now))
+  if (Object.keys(left).length !== Object.keys(all).length) await update($, typingA, () => left)
+  if (Object.keys(left).length) scheduleTypingSweep($)
+}
+
+// Who's writing now: each name once.
+function typingWords(all: Record<string, { who: string; until: number }>): string[] {
+  return [...new Set(Object.values(all).map(t => t.who))]
+}
+
+// 「○○님이 입력 중」: one name or two in their colors, past that how many.
+function typingText(el: UI, names: string[], colors: Map<string, string>, key = 'typing') {
+  const { Text } = el
+  const named = (name: string) => (
+    <Text key={`who-${name}`} bold color={colors.get(name) ?? colorFor(name)}>
+      {`${name}님`}
+    </Text>
+  )
+  const who =
+    names.length > 2
+      ? [<Text key="count" bold>{`${names.length}명`}</Text>]
+      : names.flatMap((n, i) => (i ? [<Text key={`and-${i}`}>{' · '}</Text>, named(n)] : [named(n)]))
+  return (
+    <Text key={key} wrap="truncate-end">
+      {who}
+      <Text key="what" dimColor>
+        {'이 입력 중…'}
+      </Text>
+    </Text>
+  )
 }
 
 async function openRoom($: $, page?: RoomTab) {
@@ -12261,6 +12360,19 @@ export const register: Register = (on, options) => {
     return next(e)
   })
 
+  // Writing in the prompt box tells the room someone is (the words stay
+  // here). Only the terminal raises these as a person types; the box's
+  // own answer goes on untouched.
+  on('prompt.edit', async ($, e, next) => {
+    const r = await next(e)
+    void noteTyping($, r.text).catch(() => {})
+    return r
+  })
+  on('prompt.change', async ($, e, next) => {
+    void noteTyping($, e.text).catch(() => {})
+    return next(e)
+  })
+
   // 입력창에서 @ 를 치면 방에 있는 사람 이름을 추천한다(11/20).
   // 고르면 멘션 규칙(mentionsOf)에 맞는 꼴로 써 준다: 이름 전체를 띄어쓰기 없이, 안 되면 첫 낱말.
   on('prompt.autocomplete', { token: /^@/ }, async ($, e, next) => {
@@ -12293,6 +12405,7 @@ export const register: Register = (on, options) => {
   // shared one.
   on('prompt.submit', async ($, e, next) => {
     if (e.origin.kind === 'plugin') return next(e)
+    void noteTyping($, '').catch(() => {})
     const fromPerson = GUEST_SENDS.has(e.origin.kind) && !(e as { isMeta?: true }).isMeta
     // A message from another of this person's sessions here, which a guest
     // relays to the host's session, or keeps with a note where they've said
@@ -14038,6 +14151,7 @@ export const register: Register = (on, options) => {
     const newer = await read($, newerA)
     const updates = await read($, updatesA)
     const colors = roomColors(v.everyone, [...chat.map(c => c.who), ...activity.map(a => a.who)])
+    const typingNames = typingWords(await read($, typingA))
     const colorOf = (name: string) => colors.get(name) ?? colorFor(name)
     const people = faces(v, colors)
     const isHost = v.mode === 'host'
@@ -14674,11 +14788,13 @@ export const register: Register = (on, options) => {
         ) : (
           <Text dimColor>Nothing yet. Say hi: everyone here sees it, and Claude doesn't.</Text>
         )}
+        {typingNames.length ? typingText(el, typingNames, colors) : null}
         {Input ? (
           <Input
             key={`chat-input-${chat.length}`}
             placeholder="Message everyone (Claude doesn't read this)"
             submitLabel="Send"
+            onInput={(value: string) => void noteTyping($, value).catch(() => {})}
             onSubmit={(value: string) => void postChat($, value)}
           />
         ) : (
@@ -15324,6 +15440,9 @@ export const register: Register = (on, options) => {
           />
         </Box>
       ) : null
+    // Someone writing takes the words while they do (a few seconds).
+    const typingNames = typingWords(await read($, typingA))
+    const typingNow = typingNames.length ? typingText(el, typingNames, colors, 'now') : null
     const pin = !stopping && e.surface === 'desktop' && (await read($, pinRefusedA))
     // An invite to another session waits here too (every session may be in a
     // room): a button in the row, in place of the two it can spare.
@@ -15344,7 +15463,8 @@ export const register: Register = (on, options) => {
               Press again to end the room for everyone
             </Text>
           ) : (
-            (ticking ??
+            (typingNow ??
+            ticking ??
             nowOf(el, v, colors) ?? (
               <Text key="now" dimColor wrap="truncate-end">
                 {`· ${facts}`}

@@ -301,6 +301,11 @@ async function postEvents({ room, req, now, auth }: MemberArgs): Promise<RouteRe
       changed = true
       continue
     }
+    // Whether someone is writing, and nothing else: one flag.
+    if (item.type === 'typing') {
+      room.append(from, 'typing', { on: item.body?.on === true }, now)
+      continue
+    }
     if (item.type === 'react' || item.type === 'seen') {
       const mark = tidyMark(item.type, item.body)
       if (mark) room.append(from, item.type, mark, now)
