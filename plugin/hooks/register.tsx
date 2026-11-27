@@ -1923,6 +1923,8 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
     case 'prompt':
       if (typeof body.text === 'string') await note({ ts: event.ts, who, kind: 'prompt', text: body.text })
       if (live && !mine) await heardTyping($, event.from.seat ?? who, who, false, event.ts)
+      // 손님의 말이 방장을 부르면 대기 줄에 들어오는 지금 알린다(11/27). 예전에는 차례가 와서 턴이 시작될 때까지 몰랐다.
+      if (live && !mine && mode === 'host' && typeof body.text === 'string') await noteMention($, room, who, body.text, 'prompt', event.ts)
       if (live && !mine && mode === 'host') nudgeSidebar($)
       break
     case 'stop':
@@ -2029,6 +2031,9 @@ async function absorb($: $, room: ShareRoom, mode: ShareMode, event: ServerEvent
       break
     case 'row':
       await noteRow($, room, s, body as unknown as Row, event.ts)
+      // 방장이 답 도중에 친 말의 멘션(11/27): 턴 시작이 없어 다른 길로는 알림이 안 갔다.
+      if (live && !mine && body.kind === 'user' && body.midTurn === true && typeof body.text === 'string')
+        await noteMention($, room, typeof body.who === 'string' ? body.who : who, body.text, 'prompt', event.ts)
       break
     case 'react':
       if (typeof body.key === 'string' && typeof body.emoji === 'string' && (REACTS as readonly string[]).includes(body.emoji)) {
@@ -2300,18 +2305,38 @@ async function cue($: $, kind: 'join' | 'mention' | 'turn', say?: string) {
 
 // Someone's prompt or chat line that @mentions this person: a toast, a ping,
 // and a reply begun in their empty prompt box.
+// 같은 멘션은 한 번만(11/27): 손님의 말은 대기 줄에 들어올 때와 차례가 와서 턴이 시작될 때 두 번 지나간다.
+const mentionedRecently = new Map<string, number>()
+
+// 「○○님이」 · 「Claude가」: 누가 불렀는지, 한국어 조사까지.
+function calledBy(who: string): string {
+  return who === 'Claude' || who.endsWith(' Claude') ? `${who}가` : `${who}님이`
+}
+
 async function noteMention($: $, room: ShareRoom, who: string, text: string, where: 'prompt' | 'chat', ts?: number) {
   const me = await meIn($, room)
-  if (who === me || !mentionsOf(text, [me]).length) return
-  const said = text.replace(/\s+/g, ' ').trim()
-  $.ui.toast(`${who} mentioned you${where === 'chat' ? ' in the chat' : ''}: ${said.slice(0, 120)}${said.length > 120 ? '…' : ''}`)
+  // 방 사람 모두를 놓고 본다: 첫 낱말이 겹치는 사람이 있으면 그 낱말로는 부를 수 없다.
+  const names = [...new Set([me, ...(await read($, peopleA)).map(p => p.name)])]
+  if (who === me || !mentionsOf(text, names).includes(me)) return
+  let said = text.replace(/\s+/g, ' ').trim()
+  // 방장 세션의 Claude 가 답에서 부른 것(tagFromAnswer 가 「Claude: …」로 채팅에 올림): 보낸 사람은 그 Claude.
+  if (where === 'chat' && said.startsWith('Claude: ')) {
+    who = `${who}님 세션의 Claude`
+    said = said.slice('Claude: '.length)
+  }
+  const now = await $.clock.now()
+  const key = `${who}\n${said}`
+  if (now - (mentionedRecently.get(key) ?? -Infinity) < 10 * 60_000) return
+  mentionedRecently.set(key, now)
+  for (const [k, at] of mentionedRecently) if (now - at > 10 * 60_000) mentionedRecently.delete(k)
+  $.ui.toast(`${calledBy(who)} 멘션했습니다${where === 'chat' ? '(채팅)' : ''}: ${said.slice(0, 120)}${said.length > 120 ? '…' : ''}`)
   // 다시 연결하며 따라잡은 지난 멘션(2분 넘음)은 토스트만(11/27): 자는 동안 온 멘션마다 맥 알림 · 소리 · 독이 쏟아졌다.
-  if (ts !== undefined && (await $.clock.now()) - ts > MENTION_FRESH_MS) return
-  void cue($, 'mention', `${who} mentioned you`)
+  if (ts !== undefined && now - ts > MENTION_FRESH_MS) return
+  void cue($, 'mention', `${calledBy(who)} 불렀습니다`)
   // 맥 알림 센터에도 띄운다(11/20). 초대 알림(notifyInvite)과 같은 길.
   void notifyMention($, who, said, where).catch(() => {})
   void bounceDock($).catch(() => {})
-  void $.prompt.suggest({ text: `@${who} ` }).catch(() => {})
+  if (!who.endsWith(' Claude')) void $.prompt.suggest({ text: `@${who.replace(/\s+/g, '')} ` }).catch(() => {})
   nudgeSidebar($)
 }
 
@@ -2338,12 +2363,14 @@ async function tagFromAnswer($: $, text: string) {
       .slice(0, 2)
       .join(' / ')
       .slice(0, 600)
-  const others = hit.filter(name => name !== me)
+  // 그 턴을 시킨 사람은 답을 실시간으로 보고 있으니 다시 부르지 않는다(11/27).
+  const owner = lastTurnFor
+  const others = hit.filter(name => name !== me && name !== owner)
   if (others.length) {
     const said = linesFor(others)
     if (said) await postChat($, `Claude: ${said}`)
   }
-  if (hit.includes(me)) {
+  if (hit.includes(me) && owner !== me) {
     const said = linesFor([me])
     if (said) {
       void notifyMention($, 'Claude', said, 'prompt').catch(() => {})
@@ -2357,7 +2384,7 @@ async function tagFromAnswer($: $, text: string) {
 async function notifyMention($: $, who: string, said: string, where: 'prompt' | 'chat') {
   // 시험용 세션(SHARED_SESSION_NO_BROWSER=1)은 이 컴퓨터에 아무것도 띄우지 않는다.
   if ((await $.env.get('SHARED_SESSION_NO_BROWSER')) === '1') return
-  const title = `${who} 님이 멘션했습니다`
+  const title = `${calledBy(who)} 멘션했습니다`
   const body = `${where === 'chat' ? '(채팅) ' : ''}${said.slice(0, 160)}${said.length > 160 ? '…' : ''}`
   const ran = await systemNotify($, title, body, await sessionLink($))
   if (!ran) await $.ui.notify(body, { title }).catch(() => null)
@@ -2408,6 +2435,8 @@ async function bounceDock($: $) {
       'f="$HOME/.claude/dock-bounce.jxa.js"',
       '[ -f "$f" ] && command -v osascript >/dev/null 2>&1 || exit 0',
       'pgrep -f dock-bounce.jxa.js >/dev/null 2>&1 && exit 0',
+      // Claude 가 이미 맨 앞이면 튀길 까닭이 없다(11/27).
+      'lsappinfo info -only bundleid "$(lsappinfo front 2>/dev/null)" 2>/dev/null | grep -q com.anthropic.claudefordesktop && exit 0',
       `nohup osascript -l JavaScript "$f"${open ? ` ${sq(open)}` : ''} </dev/null >/dev/null 2>&1 &`,
       '',
     ].join('\n'),
@@ -13043,7 +13072,7 @@ export const register: Register = (on, options) => {
         const { words, byHost } = found
         const spoken = byHost ? null : splitSpeaker(words)
         const theirs = spoken && (await read($, peopleA)).some(p => p.role !== 'host' && p.name === spoken.who)
-        sendRow($, theirs && spoken ? { kind: 'user', who: spoken.who, text: spoken.text } : { kind: 'user', who: host, text: words })
+        sendRow($, theirs && spoken ? { kind: 'user', who: spoken.who, text: spoken.text, midTurn: true } : { kind: 'user', who: host, text: words, midTurn: true })
         return stored
       }
     }

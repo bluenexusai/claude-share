@@ -26,6 +26,8 @@ export type Row = {
   patch?: string
   /** A user row of a teammate's session's message: the id their joined session plays it under. */
   pid?: string
+  /** 방장이 답 도중에 친 말(11/27): 턴이 따로 시작되지 않아, 손님 쪽은 이 줄에서 멘션을 본다. */
+  midTurn?: true
 }
 
 /** A picture in the room's files: its id (the bytes' SHA-256), type and size. */

@@ -27,3 +27,10 @@ for (const [text, want] of cases) {
     expect(mentionsOf(text, names)).toEqual(want)
   })
 }
+
+test('첫 낱말이 둘과 겹치면(@Kim) 아무도 부르지 않고, 전체 이름은 부른다', () => {
+  const two = ['Kim Minji', 'Kim Jisoo', 'Park Sora']
+  expect(mentionsOf('@Kim 확인', two)).toEqual([])
+  expect(mentionsOf('@KimMinji 확인', two)).toEqual(['Kim Minji'])
+  expect(mentionsOf('@Park 확인', two)).toEqual(['Park Sora'])
+})

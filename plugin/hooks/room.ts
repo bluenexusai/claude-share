@@ -27,10 +27,13 @@ export function mentionsOf(text: string, names: readonly string[]): string[] {
   const at = [...text.matchAll(/(^|[^\w@/:.])@([\p{L}\p{N}._'-]+)(?![\p{L}\p{N}._'/-])/gu)].map(m => m[2]!.toLowerCase().replace(/[._'-]+$/, ''))
   if (!at.length) return []
   const named = (a: string, n: string) => a === n || (n.length > 0 && a.startsWith(n) && NAME_TAILS.has(a.slice(n.length)))
+  const firstOf = (name: string) => name.toLowerCase().split(/\s+/)[0] ?? ''
   for (const name of names) {
     const whole = name.toLowerCase().replace(/\s+/g, '')
-    const first = name.toLowerCase().split(/\s+/)[0] ?? ''
-    if (at.some(a => named(a, whole) || named(a, first))) out.add(name)
+    const first = firstOf(name)
+    // 첫 낱말이 둘 이상과 겹치면(`@Kim`) 첫 낱말로는 아무도 부르지 않는다: 전체 이름을 쳐야 한다.
+    const shared = names.filter(n => firstOf(n) === first).length > 1
+    if (at.some(a => named(a, whole) || (!shared && named(a, first)))) out.add(name)
   }
   return [...out]
 }
